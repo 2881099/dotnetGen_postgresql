@@ -17,7 +17,7 @@
  * 安装 ServerWinService 服务，启动前设置服务端口
  * 配置 MakeCode 服务器，向开发者发送 MakeCode 生成器
 
-> MakeCode 已支持命令行，输入 cmd -> makecode ?
+> MakeCode 已支持命令行，查看帮助可输入 cmd -> makecode ?
 
 > C:/Users/Administrator/Desktop/生成器PgSql/MakeCode 10.17.65.88:5432 -U postgres -P 123456 -D 数据库 -N 项目名 -O "X:/git.oa.com/xteam/dyschool/"
 
