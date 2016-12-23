@@ -1696,7 +1696,7 @@ namespace {0}.BLL {{
 						sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}Like(params {2}[] {1}) {{
 			if ({1} == null) return this;
-			return this.Where1Or(@""a.""""{3}"""" ILIKE {{0}}"", {1}.Select<{2}, string>(a => ""%"" + a + ""%"").ToArray());
+			return this.Where1Or(@""a.""""{3}"""" ILIKE {{0}}"", {1}.Select(a => ""%"" + a + ""%"").ToArray());
 		}}", uClass_Name, fkcsBy, csType, col.Name);
 						return;
 					}
