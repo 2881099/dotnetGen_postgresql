@@ -24,3 +24,13 @@
 > 开发过程中，修改表后执行命令可以快速生成SDK；
 
 共勉，一起学习QQ群：8578575
+
+-----------------
+
+nuget 源：
+
+```xml
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />
+    <add key="nuget.org" value="http://api.nuget.org/v3/index.json" />
+    <add key="Ahoy Preview MyGet" value="https://www.myget.org/F/domaindrivendev/api/v3/index.json" />
+```
