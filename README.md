@@ -42,21 +42,21 @@
 
 | <font color=gray>功能对比</font>          | dotnetGen     | dotnetGen_sqlserver  | dotnetGen_mysql | <font color=red>dotnetGen_postgresql</font> |
 | ----------------: | -------------:| --------------------:| --------------: | -------------------: |
-| 连接池             | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> |
-| 事务               | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> |
-| 表                 | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> |
-| 表关系(1对1)        | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> |
-| 表关系(1对多)       | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> |
-| 表关系(多对多)      | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> |
-| 表主键             | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> |
-| 表唯一键           | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> |
-| 存储过程           | <font color=green size=4><b>√</b></font> | - | - | - |
-| 视图               | - | - | - | <font color=green size=4><b>√</b></font> |
-| 类型映射           | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> |
-| 枚举               | - | - | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> |
-| 自定义类型         | - | - | - | <font color=green size=4><b>√</b></font> |
-| 数组               | - | - | - | <font color=green size=4><b>√</b></font> |
-| xml               | - | - | - | - |
-| json              | - | - | - | <font color=green size=4><b>√</b></font> |
-| RESTful           | - | - | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> |
-| 后台管理功能       | <font color=green size=4><b>√</b></font> | - | <font color=green size=4><b>√</b></font> | <font color=green size=4><b>√</b></font> |
+| 连接池             | √ | √ | √ | √ |
+| 事务               | √ | √ | √ | √ |
+| 表                 | √ | √ | √ | √ |
+| 表关系(1对1)        | √ | √ | √ | √ |
+| 表关系(1对多)       | √ | √ | √ | √ |
+| 表关系(多对多)      | √ | √ | √ | √ |
+| 表主键             | √ | √ | √ | √ |
+| 表唯一键           | √ | √ | √ | √ |
+| 存储过程           | √ |   |   |   |
+| 视图               |   |   |   | √ |
+| 类型映射           | √ | √ | √ | √ |
+| 枚举               |   |   | √ | √ |
+| 自定义类型         |   |   |   | √ |
+| 数组               |   |   |   | √ |
+| xml               |   |   |   |   |
+| json              |   |   |   | √ |
+| RESTful           |   |   | √ | √ |
+| 后台管理功能       | √ |   | √ | √ |
