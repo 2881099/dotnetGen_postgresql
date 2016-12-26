@@ -44,7 +44,7 @@ namespace Npgsql {
 				else {
 					decimal trydec;
 					if (parms[a] is bool || parms[a] is bool?)
-						nparms[a] = (bool)parms[a] ? 1 : 0;
+						nparms[a] = (bool)parms[a] ? "'t'" : "'f'";
 					else if (parms[a] is string || parms[a] is Enum)
 						nparms[a] = string.Concat("'", parms[a].ToString().Replace("'", "''"), "'");
 					else if (decimal.TryParse(string.Concat(parms[a]), out trydec))
