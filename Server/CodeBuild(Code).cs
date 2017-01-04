@@ -1335,8 +1335,6 @@ namespace {0}.BLL {{
 				int.TryParse(RedisHelper.Configuration[""{0}_BLL_ITEM_CACHE:Timeout""], out itemCacheTimeout);
 		}}", solutionName, uClass_Name);
 
-				string removeCacheCode = string.Format(@"
-			if (itemCacheTimeout > 0) RemoveCache(GetItem({1}));", uClass_Name, pkCsParamNoType);
 				Dictionary<string, bool> del_exists2 = new Dictionary<string, bool>();
 				foreach (List<ColumnInfo> cs in table.Uniques) {
 					string parms = string.Empty;
@@ -1361,9 +1359,10 @@ namespace {0}.BLL {{
 					if (del_exists2.ContainsKey(parms)) continue;
 					del_exists2.Add(parms, true);
 					sb2.AppendFormat(@"
-		public static int Delete{2}({0}) {{{3}
+		public static int Delete{2}({0}) {{
+			if (itemCacheTimeout > 0) RemoveCache(GetItem{2}({1}));
 			return dal.Delete{2}({1});
-		}}", parms, parmsNoneType, cs[0].IsPrimaryKey ? string.Empty : parmsBy, cs[0].IsPrimaryKey ? removeCacheCode : string.Empty);
+		}}", parms, parmsNoneType, cs[0].IsPrimaryKey ? string.Empty : parmsBy);
 
 
 					sb3.AppendFormat(@"
@@ -1729,8 +1728,8 @@ namespace {0}.BLL {{
 					for (int a = 0; a < table.PrimaryKeys.Count; a++) {
 						ColumnInfo col88 = table.PrimaryKeys[a];
 						pkNames += CodeBuild.UFString(col88.Name) + ",";
-						pkUrlQuerys += string.Format(@"{0}={{#a.{0}}}&", CodeBuild.UFString(col88.Name));
-						pkHiddens += string.Format(@"{{#a.{0}}},", CodeBuild.UFString(col88.Name));
+						pkUrlQuerys += string.Format(@"{0}=@item.{0}&", CodeBuild.UFString(col88.Name));
+						pkHiddens += string.Format(@"@item.{0},", CodeBuild.UFString(col88.Name));
 					}
 					if (pkNames.Length > 0) pkNames = pkNames.Remove(pkNames.Length - 1);
 					if (pkUrlQuerys.Length > 0) pkUrlQuerys = pkUrlQuerys.Remove(pkUrlQuerys.Length - 1);
@@ -1751,9 +1750,9 @@ namespace {0}.BLL {{
 
 			dir2 = Sysdir.Insert(dir1.Id, DateTime.Now, ""{0}"", {1}, ""/{0}/"");
 			dir3 = Sysdir.Insert(dir2.Id, DateTime.Now, ""列表"", 1, ""/{0}/"");
-			dir3 = Sysdir.Insert(dir2.Id, DateTime.Now, ""添加"", 2, ""/{0}/add.aspx"");
-			dir3 = Sysdir.Insert(dir2.Id, DateTime.Now, ""编辑"", 3, ""/{0}/edit.aspx"");
-			dir3 = Sysdir.Insert(dir2.Id, DateTime.Now, ""删除"", 4, ""/{0}/del.aspx"");", nClass_Name, admin_controllers_syscontroller_init_sysdir.Count + 1));
+			dir3 = Sysdir.Insert(dir2.Id, DateTime.Now, ""添加"", 2, ""/{0}/add"");
+			dir3 = Sysdir.Insert(dir2.Id, DateTime.Now, ""编辑"", 3, ""/{0}/edit"");
+			dir3 = Sysdir.Insert(dir2.Id, DateTime.Now, ""删除"", 4, ""/{0}/del"");", nClass_Name, admin_controllers_syscontroller_init_sysdir.Count + 1));
 					#endregion
 
 					#region Controller.cs
@@ -1763,22 +1762,16 @@ namespace {0}.BLL {{
 					string str_listTd1 = "";
 					string str_controller_list_join = "";
 					byte str_controller_list_join_alias = 97;
-					string str_controller_list_apireturn = "";
-					string str_listFilter_js_array = "";
-					string str_listJsonCombine = "";
 					string str_listCms2FilterFK = "";
+					string str_listCms2FilterFK_fkitems = "";
 					int str_listCms2FilterAjaxs = 0;
 					string keyLikes = string.Empty;
 					string getListParamQuery = "";
 					bool ttfk_flag = false;
 					string str_addhtml_mn = "";
-					string str_addjs_mn = "";
-					string str_addjs_mn_initUI = "";
-					string str_addjs_mn_geturl = "";
 					string str_controller_insert_mn = "";
 					string str_controller_update_mn = "";
-					int wwwroo_xxx_add_html_ajaxs = 0;
-					int wwwroo_xxx_add_html_ajaxs_update = 0;
+					string str_addjs_mn_initUI = "";
 					foreach (ColumnInfo col in table.Columns) {
 						List<ColumnInfo> us = table.Uniques.Find(delegate (List<ColumnInfo> cs) {
 							return cs.Find(delegate (ColumnInfo col88) {
@@ -1823,7 +1816,7 @@ namespace {0}.BLL {{
 									return col88.Name.ToLower().IndexOf("name") != -1 || col88.Name.ToLower().IndexOf("title") != -1;
 								});
 								if (strNameCol == null) strNameCol = fk.ReferencedTable.Columns.Find(delegate (ColumnInfo col88) {
-									return col88.CsType == "string" && col88.Length > 0 && col88.Length < 128;
+									return col88.CsType == "string" && col88.Length > 0 && col88.Length < 300;
 								});
 							}
 							strName = strNameCol != null ? "." + CodeBuild.UFString(strNameCol.Name) : string.Empty;
@@ -1846,26 +1839,21 @@ namespace {0}.BLL {{
 						if (!col.IsIdentity && fks.Count == 1 && fks[0].Table.FullName != fks[0].ReferencedTable.FullName) {
 							str_listTh += string.Format(@"<th scope=""col"">{0}</th>
 						", comment);
-							str_listTd += string.Format(@"<td>[{{#a.{0}}}]{{#a.Obj_{1}{2}}}</td>
+							str_listTd += string.Format(@"<td>[@item.{0}] @item.Obj_{1}{2}</td>
 							", csUName, memberName, strName);
 							str_controller_list_join += string.Format(@"
 				.InnerJoin<{0}>(""{3}"", ""{3}.{1} = a.{2}"")", CodeBuild.UFString(fks[0].ReferencedTable.ClassName), fks[0].ReferencedColumns[0].Name, fks[0].Columns[0].Name, (char)++str_controller_list_join_alias);
-							str_controller_list_apireturn += string.Format(@", 
-				""items_{0}"", items.Select<{2}Info, {1}Info>(a => a.Obj_{3}).ToBson()", fks[0].ReferencedTable.ClassName, CodeBuild.UFString(fks[0].ReferencedTable.ClassName), CodeBuild.UFString(fks[0].Table.ClassName), memberName, strName);
-							str_listFilter_js_array += string.Format(@"
-	if (qs.{0}) qs.{0} = qs.{0}.split('_');", CodeBuild.UFString(fks[0].Columns[0].Name));
-							str_listJsonCombine += string.Format(@"
-		for (var a = 0; a < rt.data.items_{0}.length; a++) rt.data.items[a].Obj_{1} = rt.data.items_{0}[a];", fks[0].ReferencedTable.ClassName, memberName, strName);
+							str_listCms2FilterFK_fkitems += string.Format(@"
+	List<{0}Info> fk_{1}s = {0}.Select.ToList();", CodeBuild.UFString(fks[0].ReferencedTable.ClassName), CodeBuild.LFString(fks[0].ReferencedTable.ClassName));
 							str_listCms2FilterFK += string.Format(@"
-	cms2FilterFK('{0}', '{1}', '{2}', '{3}', function (r) {{
-		if (r.text.length) cms2FilterArray[{4}] = r;
-		if (--cms2FilterAjaxs <= 0) cms2Filter(cms2FilterArray, fqs);
-	}});", CodeBuild.UFString(fks[0].ReferencedTable.ClassName), strName.TrimStart('.'), CodeBuild.UFString(fks[0].ReferencedColumns[0].Name), CodeBuild.UFString(fks[0].Columns[0].Name), str_listCms2FilterAjaxs++);
+			{{ name: '{0}', field: '{4}', text: '@string.Join("","", fk_{1}s.Select(a => a.{2}).ToArray())', value: '@string.Join("","", fk_{1}s.Select(a => a.{3}).ToArray())' }},", 
+				CodeBuild.UFString(fks[0].ReferencedTable.ClassName), CodeBuild.LFString(fks[0].ReferencedTable.ClassName), 
+				strName.TrimStart('.'), CodeBuild.UFString(fks[0].ReferencedColumns[0].Name), CodeBuild.UFString(fks[0].Columns[0].Name));
 						} else if (csType == "string" && !ttfk_flag) {
 							ttfk_flag = true;
 							string t1 = string.Format(@"<th scope=""col"">{0}</th>
 						", comment);
-							string t2 = string.Format(@"<td>{{#String(a.{0}).htmlencode()}}</td>
+							string t2 = string.Format(@"<td>@item.{0}</td>
 							", csUName);
 							str_listTh1 += t1;
 							str_listTd1 += t2;
@@ -1876,7 +1864,7 @@ namespace {0}.BLL {{
 						} else {
 							str_listTh += string.Format(@"<th scope=""col"">{0}</th>
 						", comment);
-							str_listTd += string.Format(@"<td>{{#a.{0}}}</td>
+							str_listTd += string.Format(@"<td>@item.{0}</td>
 							", csUName);
 						}
 					}
@@ -1961,7 +1949,7 @@ namespace {0}.BLL {{
 							return col88.Name.ToLower().IndexOf("name") != -1 || col88.Name.ToLower().IndexOf("title") != -1;
 						});
 						if (strNameCol == null) strNameCol = fk2[0].ReferencedTable.Columns.Find(delegate (ColumnInfo col88) {
-							return col88.CsType == "string" && col88.Length > 0 && col88.Length < 128;
+							return col88.CsType == "string" && col88.Length > 0 && col88.Length < 300;
 						});
 						if (strNameCol == null) strNameCol = fk2[0].ReferencedTable.PrimaryKeys[0];
 						string strName = CodeBuild.UFString(strNameCol.Name);
@@ -1969,21 +1957,16 @@ namespace {0}.BLL {{
 						getListParamQuery += string.Format(@"[FromQuery] {0}[] {1}_{2}, ", fk2[0].ReferencedTable.PrimaryKeys[0].CsType.Replace("?", ""), CodeBuild.UFString(addname), table.PrimaryKeys[0].Name);
 						sb3.AppendFormat(@"
 			if ({0}_{1}.Length > 0) select.Where{0}_{1}({0}_{1});", CodeBuild.UFString(addname), table.PrimaryKeys[0].Name);
-				//		str_controller_list_apireturn += string.Format(@", 
-				//""items_{0}s"", items.Select<{1}Info, IDictionary[]>(a => a.Obj_{0}s.ToBson())", addname, uClass_Name);
-						str_listFilter_js_array += string.Format(@"
-	if (qs.{0}_{1}) qs.{0}_{1} = qs.{0}_{1}.split('_');", CodeBuild.UFString(addname), table.PrimaryKeys[0].Name);
-		//				str_listJsonCombine += string.Format(@"
-		//for (var a = 0; a < rt.data.items_{0}s.length; a++) rt.data.items[a].Obj_{0}s = rt.data.items_{0}s[a];", addname);
+						str_listCms2FilterFK_fkitems += string.Format(@"
+	List<{0}Info> fk_{1}s = {0}.Select.ToList();", CodeBuild.UFString(fk2[0].ReferencedTable.ClassName), CodeBuild.LFString(fk2[0].ReferencedTable.ClassName));
 						str_listCms2FilterFK += string.Format(@"
-	cms2FilterFK('{0}', '{1}', '{2}', '{3}', function (r) {{
-		if (r.text.length) cms2FilterArray[{4}] = r;
-		if (--cms2FilterAjaxs <= 0) cms2Filter(cms2FilterArray, fqs);
-	}});", CodeBuild.UFString(fk2[0].ReferencedTable.ClassName), strName, CodeBuild.UFString(fk2[0].ReferencedColumns[0].Name), CodeBuild.UFString(fk2[0].Columns[0].Name), str_listCms2FilterAjaxs++);
+			{{ name: '{0}', field: '{4}', text: '@string.Join("","", fk_{1}s.Select(a => a.{2}).ToArray())', value: '@string.Join("","", fk_{1}s.Select(a => a.{3}).ToArray())' }},",
+			CodeBuild.UFString(fk2[0].ReferencedTable.ClassName), CodeBuild.LFString(fk2[0].ReferencedTable.ClassName),
+			strName.TrimStart('.'), CodeBuild.UFString(fk2[0].ReferencedColumns[0].Name), CodeBuild.UFString(fk2[0].Columns[0].Name));
 					//add.html 标签关联
-					itemCsParamInsertForm += string.Format(", [FromForm] {0}[] mn_{1}", fk2[0].ReferencedColumns[0].CsType.Replace("?", ""), CodeBuild.UFString(addname));
-					itemCsParamUpdateForm += string.Format(", [FromForm] {0}[] mn_{1}", fk2[0].ReferencedColumns[0].CsType.Replace("?", ""), CodeBuild.UFString(addname));
-					str_controller_insert_mn += string.Format(@"
+						itemCsParamInsertForm += string.Format(", [FromForm] {0}[] mn_{1}", fk2[0].ReferencedColumns[0].CsType.Replace("?", ""), CodeBuild.UFString(addname));
+						itemCsParamUpdateForm += string.Format(", [FromForm] {0}[] mn_{1}", fk2[0].ReferencedColumns[0].CsType.Replace("?", ""), CodeBuild.UFString(addname));
+						str_controller_insert_mn += string.Format(@"
 			//关联 {1}
 			foreach ({0} mn_{1}_in in mn_{1})
 				item.Flag{1}(mn_{1}_in);", fk2[0].ReferencedColumns[0].CsType.Replace("?", ""), CodeBuild.UFString(addname));
@@ -2004,33 +1987,52 @@ namespace {0}.BLL {{
 						<tr>
 							<td>{1}</td>
 							<td>
-								<select name=""mn_{0}"" data-placeholder=""Select a {1}"" class=""form-control select2"" multiple>
-									<option @for=""a in items"" value=""{{#a.{2}}}"">{{#a.{3}}}</option>
+								<select name=""mn_{2}"" data-placeholder=""Select a {3}"" class=""form-control select2"" multiple>
+									@foreach ({0}Info fktag in fk_{1}s) {{ <option value=""@fktag.{4}"">@fktag.{5}</option> }}
 								</select>
 							</td>
-						</tr>", CodeBuild.UFString(addname), CodeBuild.UFString(addname), CodeBuild.UFString(fk2[0].ReferencedColumns[0].Name), strName);
-						str_addjs_mn += string.Format(@"
-	$.getJSON('/apiv0/{0}/', {{ limit: 2000 }}, function (rt) {{
-		renderTpl(form.mn_{1}, rt.data);
-		if (--ajaxs <= 0) initUI();
-	}});", CodeBuild.UFString(addname), CodeBuild.UFString(addname));
+						</tr>", CodeBuild.UFString(fk2[0].ReferencedTable.ClassName), CodeBuild.LFString(fk2[0].ReferencedTable.ClassName),
+							CodeBuild.UFString(addname), CodeBuild.LFString(addname), CodeBuild.UFString(fk2[0].ReferencedColumns[0].Name), strName);
+
 						str_addjs_mn_initUI += string.Format(@"
-		if (data.mn_{0}) for (var a = 0; a < data.mn_{0}.length; a++) $(form.mn_{0}).find('option[value=""{{0}}""]'.format(data.mn_{0}[a].{1})).attr('selected', 'selected');", CodeBuild.UFString(addname), CodeBuild.UFString(fk2[0].ReferencedColumns[0].Name));
-						str_addjs_mn_geturl += string.Format(@"
-		$.getJSON('/apiv0/{0}/', {{ {1}_{2}: top.mainViewNav.query.{3} }}, function (rt) {{
-			if (rt.success) data.mn_{0} = rt.data.items;
-			if (--ajaxs <= 0) initUI();
-		}});", CodeBuild.UFString(addname), uClass_Name, table.PrimaryKeys[0].Name, CodeBuild.UFString(table.PrimaryKeys[0].Name));
-						wwwroo_xxx_add_html_ajaxs_update++;
-						wwwroo_xxx_add_html_ajaxs++;
-						wwwroo_xxx_add_html_ajaxs++;
+		data.mn_{0} = @Html.Raw(item.Obj_{2}s.ToJson());
+		for (var a = 0; a < data.mn_{0}.length; a++) $(form.mn_{0}).find('option[value=""{{0}}""]'.format(data.mn_{0}[a].{1})).attr('selected', 'selected');", CodeBuild.UFString(addname), CodeBuild.UFString(fk2[0].ReferencedColumns[0].Name), CodeBuild.LFString(addname));
 					});
 
-					sb1.AppendFormat(CONST.Admin_Controllers, solutionName, uClass_Name, nClass_Name, pkMvcRoute, pkCsParam.Replace("?", ""), pkCsParamNoType, itemSetValuePK, itemSetValueNotPK, 
-						sb2.ToString(), sb3.ToString(), itemCsParamInsertForm, itemCsParamUpdateForm, getListParamQuery, itemSetValuePKInsert, str_controller_list_join, str_controller_list_apireturn,
-						str_controller_insert_mn, str_controller_update_mn);
+					string str_mvcdel = string.Format(@"
+		public APIReturn Delete([FromForm] {2}[] ids) {{
+			int affrows = 0;
+			foreach ({2} id in ids)
+				affrows += {1}.Delete(id);
+			if (affrows > 0) return APIReturn.成功.SetMessage($""删除成功，影响行数：{{affrows}}"");
+			return APIReturn.失败;
+		}}", solutionName, uClass_Name, table.PrimaryKeys[0].CsType.Replace("?", ""));
+					if (table.PrimaryKeys.Count > 1) {
+						string pkParses = "";
+						int pk_idx = 0;
+						foreach (ColumnInfo pk in table.PrimaryKeys) {
+							pkParses += ", " + string.Format(GetStringifyParse(pk.Type, pk.CsType), "vs[" + pk_idx++ + "]");
+						}
+						pkParses = pkParses.Substring(2);
+						str_mvcdel = string.Format(@"
+		public APIReturn Delete([FromForm] string[] ids) {{
+			int affrows = 0;
+			foreach (string id in ids) {{
+				string[] vs = id.Split(',');
+				affrows += {1}.Delete({2});
+			}}
+			if (affrows > 0) return APIReturn.成功.SetMessage($""删除成功，影响行数：{{affrows}}"");
+			return APIReturn.失败;
+		}}", solutionName, uClass_Name, pkParses);
+					}
 
-					loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"\ApiV0Controllers\", uClass_Name, @"Controller.cs"), Deflate.Compress(sb1.ToString())));
+					sb1.AppendFormat(CONST.Admin_Controllers, solutionName, uClass_Name, nClass_Name, pkMvcRoute,
+						"[FromQuery] " + pkCsParam.Replace("?", "").Replace(", ", ", [FromQuery] "), pkCsParamNoType, itemSetValuePK, itemSetValueNotPK, 
+						sb2.ToString(), sb3.ToString(), itemCsParamInsertForm, itemCsParamUpdateForm, getListParamQuery, itemSetValuePKInsert, 
+						str_controller_list_join, "",
+						str_controller_insert_mn, str_controller_update_mn, str_mvcdel);
+
+					loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"\AdminControllers\", uClass_Name, @"Controller.cs"), Deflate.Compress(sb1.ToString())));
 					clearSb();
 					#endregion
 
@@ -2065,87 +2067,104 @@ namespace {0}.BLL {{
 							", FFK_nClass_Name, urlQuerys);
 							}
 						}
-						sb1.AppendFormat(@"
+						sb1.AppendFormat(@"@{{ 
+	Layout = """";
+}}
+
 <div class=""box"">
 	<div class=""box-header with-border"">
 		<h3 id=""box-title"" class=""box-title""></h3>
 		<a href=""./"" class=""btn btn-primary"">重置筛选</a>
-		<span class=""form-group mr15""></span><a href=""./add.html"" data-toggle=""modal"" class=""btn btn-success pull-right"">添加</a>
+		<span class=""form-group mr15""></span><a href=""./add"" data-toggle=""modal"" class=""btn btn-success pull-right"">添加</a>
 	</div>
 	<div class=""box-body"">
 		<div class=""table-responsive"">
 			<form id=""form_search"">
 				<div id=""div_filter""></div>
 			</form>
-			<form id=""form_list"" runat=""server"">
+			<form id=""form_list"" action=""./del"" method=""post"">
+				@Html.AntiForgeryToken()
+				<input type=""hidden"" name=""__callback"" value=""del_callback""/>
 				<table id=""GridView1"" cellspacing=""0"" rules=""all"" border=""1"" style=""border-collapse:collapse;"" class=""table table-bordered table-hover"">
 					<tr>
 						<th scope=""col"" style=""width:2%;""><input type=""checkbox"" onclick=""$('#GridView1 tbody tr').each(function (idx, el) {{ var chk = $(el).find('td:first input[type=\'checkbox\']')[0]; if (chk) chk.checked = !chk.checked; }});"" /></th>
 						{3}<th scope=""col"" style=""width:5%;"">&nbsp;</th>
 					</tr>
 					<tbody>
-						<tr @for=""a in items"">
-							<td><input type=""checkbox"" id=""id"" name=""id"" value=""{2}"" /></td>
-							{4}<td><a href=""add.html?{1}"">修改</a></td>
-						</tr>
+						@foreach({0}Info item in ViewBag.items) {{
+							<tr>
+								<td><input type=""checkbox"" id=""id"" name=""id"" value=""{2}"" /></td>
+								{4}<td><a href=""./edit?{1}"">修改</a></td>
+							</tr>
+						}}
 					</tbody>
 				</table>
 			</form>
+			<a id=""btn_delete_sel"" href=""#"" class=""btn btn-danger pull-right"">删除选中项</a>
 			<div id=""kkpager""></div>
 		</div>
 	</div>
 </div>
 
+@{{{6}
+}}
 <script type=""text/javascript"">
-(function () {{
-	var qs = _clone(top.mainViewNav.query);
-	var pageindex = cint(qs.pageindex, 1);
-	qs.limit = 20;
-	qs.skip = (pageindex - 1) * qs.limit;{8}
-	delete qs.pageindex;
-	$.ajax({{ url: '/apiv0/{0}/', data: qs, traditional: true, success: function (rt) {{{5}
-		renderTpl('#form_list', rt.data);
-		delete qs.limit;
-		delete qs.skip;
-		$('#kkpager').html(cms2Pager(rt.data.count, pageindex, 20, qs, 'pageindex'));
+	(function () {{
+		top.del_callback = function(rt) {{
+			if (rt.success) return top.mainViewNav.goto('./');
+			alert(rt.message);
+		}};
+
+		var qs = _clone(top.mainViewNav.query);
+		var page = cint(qs.page, 1);
+		delete qs.page;
+		$('#kkpager').html(cms2Pager(@ViewBag.count, page, 20, qs, 'page'));
+		var fqs = _clone(top.mainViewNav.query);
+		delete fqs.page;
+		var fsc = [{5}
+			null
+		];
+		fsc.pop();
+		cms2Filter(fsc, fqs);
 		top.mainViewInit();
-	}}}});
-	// 以下是过滤项
-	var fqs = _clone(top.mainViewNav.query);
-	delete fqs.pageindex;
-	var cms2FilterArray = [];
-	var cms2FilterAjaxs = {7};{6}
-}})();
-</script>", uClass_Name, pkUrlQuerys, pkHiddens, str_listTh, str_listTd, str_listJsonCombine, str_listCms2FilterFK, str_listCms2FilterAjaxs, str_listFilter_js_array);
-						loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"wwwroot\", uClass_Name, @"\index.html"), Deflate.Compress(sb1.ToString())));
+	}})();
+</script>
+", uClass_Name, pkUrlQuerys, pkHiddens, str_listTh, str_listTd, str_listCms2FilterFK, str_listCms2FilterFK_fkitems);
+						loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"Views\Admin\", uClass_Name, @"\List.cshtml"), Deflate.Compress(sb1.ToString())));
 						clearSb();
 						#endregion
 					} else {
 						#region wwwroot/xxx/index.html(递归关系)
-						sb1.AppendFormat(@"
+						sb1.AppendFormat(@"@{{ 
+	Layout = """";
+}}
+
 <div class=""box"">
 	<div class=""box-header with-border"">
 		<h3 id=""box-title"" class=""box-title""></h3>
-		<span class=""form-group mr15""></span><a href=""./add.html"" data-toggle=""modal"" class=""btn btn-success pull-right"">添加</a>
+		<span class=""form-group mr15""></span><a href=""./add"" data-toggle=""modal"" class=""btn btn-success pull-right"">添加</a>
 	</div>
 	<div class=""box-body"">
 		<div class=""table-responsive"">
-
-			<form id=""form_list"" runat=""server"">
+			<form id=""form_list"" action=""./del"" method=""post"">
+				@Html.AntiForgeryToken()
+				<input type=""hidden"" name=""__callback"" value=""del_callback""/>
 				<table id=""GridView1"" cellspacing=""0"" rules=""all"" border=""1"" style=""border-collapse:collapse;"" class=""table table-bordered table-hover"">
 					<tr>
 						{8}{6}<th scope=""col"" style=""width:5%;"">&nbsp;</th>
 						<th scope=""col"" style=""width:5%;"">删除</th>
 					</tr>
 					<tbody>
-						<tr data-tt-id=""{{#{1}}}"" data-tt-parent-id=""{{#{2}}}"">
-							{9}{7}<td><a href=""add.html?{4}"">修改</a></td>
-							<td><input id=""id"" name=""id"" type=""checkbox"" value=""{5}"" /></td>
-						</tr>
+						@foreach({0}Info item in ViewBag.items) {{
+							<tr data-tt-id=""{{#{1}}}"" data-tt-parent-id=""{{#{2}}}"">
+								{9}{7}<td><a href=""./edit?{4}"">修改</a></td>
+								<td><input id=""id"" name=""id"" type=""checkbox"" value=""{5}"" /></td>
+							</tr>
+						}}
 					</tbody>
 				</table>
 			</form>
-
+			<a id=""btn_delete_sel"" href=""#"" class=""btn btn-danger pull-right"">删除选中项</a>
 		</div>
 	</div>
 </div>
@@ -2156,19 +2175,19 @@ namespace {0}.BLL {{
 </div>
 
 <script type=""text/javascript"">
-(function() {{
-	$.getJSON('/apiv0/{0}/', {{ limit: 2000 }}, function(rt) {{{3}
-		rt.items2 = yieldTreeArray(rt.data.items, null, '{1}', '{2}');
-		var tpl = $('#GridView1 tbody:last').html();
-		$('#GridView1 tbody:last').html(yieldTreeTable(rt.items2, tpl));
+	(function() {{
+		top.del_callback = function(rt) {{
+			if (rt.success) return top.mainViewNav.goto('./');
+			alert(rt.message);
+		}};
+
 		$('table#GridView1').treetable({{ expandable: true }});
 		$('table#GridView1').treetable('expandAll');
 		top.mainViewInit();
-	}});
-}})();
-</script>", uClass_Name, CodeBuild.UFString(table.PrimaryKeys[0].Name), CodeBuild.UFString(ttfk.Columns[0].Name), str_listJsonCombine, 
+	}})();
+</script>", uClass_Name, CodeBuild.UFString(table.PrimaryKeys[0].Name), CodeBuild.UFString(ttfk.Columns[0].Name), "", 
 	pkUrlQuerys.Replace("a.", ""), pkHiddens.Replace("a.", ""), str_listTh.Replace("a.", ""), str_listTd.Replace("a.", ""), str_listTh1.Replace("a.", ""), str_listTd1.Replace("a.", ""));
-						loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"wwwroot\", uClass_Name, @"\index.html"), Deflate.Compress(sb1.ToString())));
+						loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"Viwes\Admin\", uClass_Name, @"\List.cshtml"), Deflate.Compress(sb1.ToString())));
 						clearSb();
 						#endregion
 					}
@@ -2201,17 +2220,21 @@ namespace {0}.BLL {{
 							string.Compare(lname, "update_time", true) == 0
 							)) {
 							sb4.AppendFormat(@"
-						<tr update-visible style=""display:none"">
-							<td>{1}</td>
-							<td><input name=""{0}"" type=""text"" readonly class=""datepicker"" style=""width:20%;background-color:#ddd;"" /></td>
-						</tr>", csUName, comment);
+						@if (item != null) {{
+							<tr>
+								<td>{1}</td>
+								<td><input name=""{0}"" type=""text"" readonly class=""datepicker"" style=""width:20%;background-color:#ddd;"" /></td>
+							</tr>
+						}}", csUName, comment);
 						} else if (col.IsPrimaryKey && col.IsIdentity) {
 							//主键自动增值
 							sb4.AppendFormat(@"
-						<tr update-visible style=""display:none"">
-							<td>{1}</td>
-							<td><input name=""{0}"" type=""text"" readonly class=""datepicker"" style=""width:20%;background-color:#ddd;"" /></td>
-						</tr>", csUName, comment);
+						@if (item != null) {{
+							<tr>
+								<td>{1}</td>
+								<td><input name=""{0}"" type=""text"" readonly class=""datepicker"" style=""width:20%;background-color:#ddd;"" /></td>
+							</tr>
+						}}", csUName, comment);
 						} else if (fks_comb.Count == 1) {
 							//外键下拉框
 							ForeignKeyInfo fkcb = fks_comb[0];
@@ -2229,7 +2252,7 @@ namespace {0}.BLL {{
 								return col99.Name.ToLower().IndexOf("name") != -1 || col99.Name.ToLower().IndexOf("title") != -1;
 							});
 							if (strCol == null) strCol = fkcb.ReferencedTable.Columns.Find(delegate (ColumnInfo col99) {
-								return col99.CsType == "string" && col99.Length > 0 && col99.Length < 128;
+								return col99.CsType == "string" && col99.Length > 0 && col99.Length < 300;
 							});
 							string FK_Column_Text = fkcb.ReferencedTable != null && strCol != null ? CodeBuild.UFString(strCol.Name)
 								 : FK_Column;
@@ -2241,12 +2264,8 @@ namespace {0}.BLL {{
 							<td id=""{0}_td""></td>
 						</tr>", csUName, comment);
 								sb5.AppendFormat(@"
-	$.getJSON('/apiv0/{0}/', {{ limit: 2000 }}, function(rt) {{
-		rt.items2 = yieldTreeArray(rt.data.items, null, '{1}', '{2}');
-		$('#{3}_td').html(yieldTreeSelect(rt.items2, '{{#{4}}}', '{1}')).find('select').attr('name', '{3}');
-		if (--ajaxs <= 0) initUI();
-	}});", FK_uClass_Name, CodeBuild.UFString(fkcb.ReferencedColumns[0].Name), CodeBuild.UFString(fkrr.Columns[0].Name), csUName, FK_Column_Text);
-								wwwroo_xxx_add_html_ajaxs++;
+		$('#{3}_td').html(yieldTreeSelect(yieldTreeArray(@Html.Raw(fk_{0}s.ToJson()), null, '{1}', '{2}'), '{{#{4}}}', '{1}')).find('select').attr('name', '{3}');", 
+			FK_uClass_Name, CodeBuild.UFString(fkcb.ReferencedColumns[0].Name), CodeBuild.UFString(fkrr.Columns[0].Name), csUName, FK_Column_Text);
 							} else {
 								sb4.AppendFormat(@"
 						<tr>
@@ -2254,17 +2273,13 @@ namespace {0}.BLL {{
 							<td>
 								<select name=""{0}"">
 									<option value="""">------ 请选择 ------</option>
-									<option @for=""a in items"" value=""{{#a.{2}}}"">{{#a.{3}}}</option>
+									@foreach (var fk in fk_{4}s) {{ <option value=""@item.{2}"">@item.{3}</option> }}
 								</select>
 							</td>
-						</tr>", csUName, comment, CodeBuild.UFString(fkcb.ReferencedColumns[0].Name), FK_Column_Text);
-								sb5.AppendFormat(@"
-	$.getJSON('/apiv0/{0}/', {{ limit: 2000 }}, function (rt) {{
-		renderTpl(form.{1}, rt.data);
-		if (--ajaxs <= 0) initUI();
-	}});", FK_uClass_Name, csUName);
-								wwwroo_xxx_add_html_ajaxs++;
+						</tr>", csUName, comment, CodeBuild.UFString(fkcb.ReferencedColumns[0].Name), FK_Column_Text, FK_uClass_Name);
 							}
+							sb6.AppendFormat(@"
+	var fk_{0}s = BLL.{0}.Select.ToList();", FK_uClass_Name);
 						} else if ((col.Type == NpgsqlDbType.Integer || col.Type == NpgsqlDbType.Bigint) && (lname == "status" || lname.StartsWith("status_") || lname.EndsWith("_status"))) {
 							//加载 multi 多状态字段
 							sb4.AppendFormat(@"
@@ -2317,31 +2332,16 @@ namespace {0}.BLL {{
 							<td><textarea name=""{0}"" style=""width:100%;height:100px;"" editor=""ueditor""></textarea></td>
 						</tr>", csUName, comment);
 						} else if (col.Type == NpgsqlDbType.Enum) {
-							List<string> values = new List<string>();
-							int quote_idx = 0;
-							while(true) {
-								int start = col.SqlType.IndexOf('\'', quote_idx);
-								int end = quote_idx = start + 1;
-								if (start == -1) break;
-								while(true) {
-									end = col.SqlType.IndexOf('\'', end);
-									if (end == -1) break;
-									int zy_c = 0;
-									while (col.SqlType[end - 1] == '\\') zy_c++;
-									if (zy_c % 2 == 0) break;
-								}
-								quote_idx = Math.Max(quote_idx, end + 1);
-								values.Add(col.SqlType.Substring(start + 1, end - start - 1));
-							}
-							StringBuilder setenum_select = new StringBuilder();
-							foreach(string v in values) {
-								setenum_select.AppendFormat(@"<option value=""{0}"">{0}</option>", v);
-							}
 							sb4.AppendFormat(@"
 						<tr>
 							<td>{1}</td>
-							<td><select name=""{0}""><option value="""">------ 请选择 ------</option>{2}</select></td>
-						</tr>", csUName, comment, setenum_select);
+							<td>
+								<select name=""{0}"">
+									<option value="""">------ 请选择 ------</option>
+									@foreach (string en in Enum.GetNames(typeof(2))) {{ <option value=""@en"">@en</option> }}
+								</select>
+							</td>
+						</tr>", csUName, comment, col.CsType.Replace("?", ""));
 						} else {
 							sb4.AppendFormat(@"
 						<tr>
@@ -2351,22 +2351,26 @@ namespace {0}.BLL {{
 						}
 					}
 					sb4.Append(str_addhtml_mn);
-					sb5.Append(str_addjs_mn);
 
-					sb1.AppendFormat(@"
+					sb1.AppendFormat(@"@{{
+	Layout = """";
+	{0}Info item = ViewBag.item;
+}}
+
 <div class=""box"">
 	<div class=""box-header with-border"">
 		<h3 class=""box-title"" id=""box-title""></h3>
 	</div>
 	<div class=""box-body"">
 		<div class=""table-responsive"">
-
-			<form id=""form_add"">
+			<form id=""form_add"" method=""post"">
+				@Html.AntiForgeryToken()
+				<input type=""hidden"" name=""__callback"" value=""edit_callback"" />
 				<div>
-					<table cellspacing=""0"" rules=""all"" class=""table table-bordered table-hover"" border=""1"" style=""border-collapse:collapse;"">{0}
+					<table cellspacing=""0"" rules=""all"" class=""table table-bordered table-hover"" border=""1"" style=""border-collapse:collapse;"">{1}
 						<tr>
 							<td width=""8%"">&nbsp</td>
-							<td><input type=""submit"" value=""更新"" />&nbsp;<input type=""button"" value=""取消"" /></td>
+							<td><input type=""submit"" value=""@(item == null ? ""添加"" : ""更新"")"" />&nbsp;<input type=""button"" value=""取消"" /></td>
 						</tr>
 					</table>
 				</div>
@@ -2376,47 +2380,22 @@ namespace {0}.BLL {{
 	</div>
 </div>
 
+@{{{3}
+}}
 <script type=""text/javascript"">
-(function () {{
-	var ajaxs = {3};
-	var data = {{}};
-	var form = $('#form_add')[0];
-	var geturl = '/apiv0/{2}/'; for (var a in top.mainViewNav.query) geturl += top.mainViewNav.query[a] + '/';
-
-	function initUI() {{
-		fillForm(form, data.item);{4}
+	(function () {{
+		top.edit_callback = function (rt) {{
+			if (rt.success) return top.mainViewNav.goto('./');
+			alert(rt.message);
+		}};
+{2}
+		var form = $('#form_add')[0];
+		var item = @Html.Raw(item == null ? ""null"" : item.ToJson());
+		fillForm(form, item);{4}
 		top.mainViewInit();
-		$(form).submit(function () {{
-			if (data.item)
-				$.ajax({{ url: geturl, type: 'PUT', dataType: 'json', data: $(this).serialize(), success: function (rt) {{
-					if (!rt.success) return alert(rt.message);
-					top.mainViewNav.goto('./');
-				}}}});
-			else
-				$.ajax({{ url: '/apiv0/{2}/', type: 'POST', dataType: 'json', data: $(this).serialize(), success: function (rt) {{
-					if (!rt.success) return alert(rt.message);
-					top.mainViewNav.goto('./');
-				}}}});
-			return false;
-		}});
-	}}
-
-	if (geturl === '/apiv0/{2}/')
-		{5}
-	else{7}
-		$.getJSON(geturl, function (rt) {{
-			if (rt.success) data.item = rt.data.item;
-			if (--ajaxs <= 0) initUI();
-		}});{6}
-{1}
-}})();
-</script>
-
-", sb4.ToString(), sb5.ToString(), uClass_Name, wwwroo_xxx_add_html_ajaxs + 1, str_addjs_mn_initUI, 
-	wwwroo_xxx_add_html_ajaxs_update == 0 ? (wwwroo_xxx_add_html_ajaxs == 0 ? "setTimeout(initUI, 1);" : "--ajaxs;") : string.Format("ajaxs -= {0};", wwwroo_xxx_add_html_ajaxs_update + 1), 
-	str_addjs_mn_geturl + (wwwroo_xxx_add_html_ajaxs_update == 0 ? "" : @"
-	}"), wwwroo_xxx_add_html_ajaxs_update == 0 ? "" : " {");
-					loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"wwwroot\", uClass_Name, @"\add.html"), Deflate.Compress(sb1.ToString())));
+	}})();
+</script>", uClass_Name, sb4.ToString(), sb5.ToString(), sb6.ToString(), str_addjs_mn_initUI);
+					loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"Views\Admin\", uClass_Name, @"\Edit.cshtml"), Deflate.Compress(sb1.ToString())));
 					clearSb();
 					#endregion
 				}
@@ -2490,13 +2469,13 @@ namespace {0}.BLL {{
 
 				#region Controllers\BaseAdminController.cs
 				sb1.AppendFormat(CONST.Admin_Controllers_BaseAdminController_cs, solutionName);
-				loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"ApiV0Controllers\BaseAdminController.cs"), Deflate.Compress(sb1.ToString())));
+				loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"AdminControllers\BaseAdminController.cs"), Deflate.Compress(sb1.ToString())));
 				clearSb();
 				#endregion
 
 				#region SysController.cs
 				sb1.AppendFormat(CONST.Admin_Controllers_SysController, solutionName, string.Join(string.Empty, admin_controllers_syscontroller_init_sysdir.ToArray()));
-				loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"ApiV0Controllers\SysController.cs"), Deflate.Compress(sb1.ToString())));
+				loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"AdminControllers\SysController.cs"), Deflate.Compress(sb1.ToString())));
 				clearSb();
 				#endregion
 				#region Admin.xproj
@@ -2512,6 +2491,44 @@ namespace {0}.BLL {{
 				#region wwwroot\index.html
 				sb1.AppendFormat(CONST.Admin_wwwroot_index_html, solutionName, wwwroot_sitemap);
 				loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"wwwroot\index.html"), Deflate.Compress(sb1.ToString())));
+				clearSb();
+				#endregion
+
+				#region Views\_ViewStart.cshtml
+				sb1.AppendFormat(@"@{{
+	Layout = ""_Layout"";
+}}", solutionName);
+				loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"Views\_ViewStart.cshtml"), Deflate.Compress(sb1.ToString())));
+				clearSb();
+				#endregion
+				#region Views\_ViewImports.cshtml
+				sb1.AppendFormat(@"@using Newtonsoft.Json;
+@using {0}.BLL;
+@using {0}.Model;
+
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+", solutionName);
+				loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"Views\_ViewImports.cshtml"), Deflate.Compress(sb1.ToString())));
+				clearSb();
+				#endregion
+				#region Views\Shared\_Layout.cshtml
+				sb1.AppendFormat(@"<!DOCTYPE html>
+<html>
+<head>
+	<meta charset=""utf-8"">
+	<title>@ViewBag.title</title>
+	<link rel=""stylesheet"" href=""//cdn.bootcss.com/semantic-ui/2.1.8/semantic.min.css"">
+	<link rel=""stylesheet"" href=""/css/style.css"">
+	<script src=""//cdn.bootcss.com/jquery/1.11.3/jquery.min.js""></script>
+	<script src=""//cdn.bootcss.com/semantic-ui/2.1.8/semantic.min.js""></script>
+</head>
+<body>
+
+	@RenderBody()
+
+</body>
+</html>", solutionName);
+				loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"Views\Shared\_Layout.cshtml"), Deflate.Compress(sb1.ToString())));
 				clearSb();
 				#endregion
 				#endregion

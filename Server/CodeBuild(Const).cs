@@ -1290,63 +1290,69 @@ using Swashbuckle.SwaggerGen.Generator;
 using {0}.BLL;
 using {0}.Model;
 
-public partial class BaseAdminController : Controller {{
-	public ILogger _logger;
-	public ISession Session {{ get {{ return HttpContext.Session; }} }}
-	public HttpRequest Req {{ get {{ return Request; }} }}
-	public HttpResponse Res {{ get {{ return Response; }} }}
+namespace {0}.AdminControllers {{
+	public partial class BaseAdminController : Controller {{
+		public ILogger _logger;
+		public ISession Session {{ get {{ return HttpContext.Session; }} }}
+		public HttpRequest Req {{ get {{ return Request; }} }}
+		public HttpResponse Res {{ get {{ return Response; }} }}
 
-	//public SysuserInfo LoginUser {{ get; private set; }}
-	public BaseAdminController(ILogger logger) {{ _logger = logger; }}
-	public override void OnActionExecuting(ActionExecutingContext context) {{
-		#region 参数验证
-		if (context.ModelState.IsValid == false)
-			foreach(var value in context.ModelState.Values)
-				if (value.Errors.Any()) {{
-					context.Result = new JsonResult(APIReturn.参数格式不正确.SetMessage($""参数格式不正确：{{value.Errors.First().ErrorMessage}}""));
-					return;
-				}}
-		#endregion
-		#region 初始化当前登陆账号
-		//string username = Session.GetString(""login.username"");
-		//if (!string.IsNullOrEmpty(username)) LoginUser = Sysuser.GetItemByUsername(username);
-
-		//var method = (context.ActionDescriptor as ControllerActionDescriptor).MethodInfo;
-		//if (method.GetCustomAttribute<需要登陆Attribute>() != null && LoginUser == null)
-		//	context.Result = new RedirectResult(""/signin"");
-		//else if (method.GetCustomAttribute<匿名访问Attribute>() == null && LoginUser == null)
-		//	context.Result = new RedirectResult(""/signin"");
-		//ViewBag.user = LoginUser;
-		#endregion
-		base.OnActionExecuting(context);
-	}}
-	public override void OnActionExecuted(ActionExecutedContext context) {{
-		if (context.Exception != null) {{
-			#region 错误拦截，在这里记录日志
-			//this.Json(new APIReturn(-1, context.Exception.Message)).ExecuteResultAsync(context).Wait();
-			//context.Exception = null;
+		//public SysuserInfo LoginUser {{ get; private set; }}
+		public BaseAdminController(ILogger logger) {{ _logger = logger; }}
+		public override void OnActionExecuting(ActionExecutingContext context) {{
+			#region 参数验证
+			if (context.ModelState.IsValid == false)
+				foreach(var value in context.ModelState.Values)
+					if (value.Errors.Any()) {{
+						context.Result = new JsonResult(APIReturn.参数格式不正确.SetMessage($""参数格式不正确：{{value.Errors.First().ErrorMessage}}""));
+						return;
+					}}
 			#endregion
-		}}
-		base.OnActionExecuted(context);
-	}}
+			#region 初始化当前登陆账号
+			//string username = Session.GetString(""login.username"");
+			//if (!string.IsNullOrEmpty(username)) LoginUser = Sysuser.GetItemByUsername(username);
 
-	#region 角色权限验证
-	//public bool sysrole_check(string url) {{
-	//	url = url.ToLower();
-	//	//Response.Write(url + ""<br>"");
-	//	if (url == ""/"" || url.IndexOf(""/default.aspx"") == 0) return true;
-	//	foreach(var role in this.LoginUser.Obj_sysroles) {{
-	//		//Response.Write(role.ToString());
-	//		foreach(var dir in role.Obj_sysdirs) {{
-	//			//Response.Write(""-----------------"" + dir.ToString() + ""<br>"");
-	//			string tmp = dir.Url;
-	//			if (tmp.EndsWith(""/"")) tmp += ""default.aspx"";
-	//			if (url.IndexOf(tmp) == 0) return true;
-	//		}}
-	//	}}
-	//	return false;
-	//}}
-	#endregion
+			//var method = (context.ActionDescriptor as ControllerActionDescriptor).MethodInfo;
+			//if (method.GetCustomAttribute<需要登陆Attribute>() != null && LoginUser == null)
+			//	context.Result = new RedirectResult(""/signin"");
+			//else if (method.GetCustomAttribute<匿名访问Attribute>() == null && LoginUser == null)
+			//	context.Result = new RedirectResult(""/signin"");
+			//ViewBag.user = LoginUser;
+			#endregion
+			base.OnActionExecuting(context);
+		}}
+		public override void OnActionExecuted(ActionExecutedContext context) {{
+			if (context.Exception != null) {{
+				#region 错误拦截，在这里记录日志
+				//this.Json(new APIReturn(-1, context.Exception.Message)).ExecuteResultAsync(context).Wait();
+				//context.Exception = null;
+				#endregion
+			}}
+			base.OnActionExecuted(context);
+		}}
+
+		public override ViewResult View() {{
+			return base.View($""/Views/Admin/{{this.ControllerContext.ActionDescriptor.ControllerName}}/{{this.ControllerContext.ActionDescriptor.MethodInfo.Name}}.cshtml"");
+		}}
+
+		#region 角色权限验证
+		//public bool sysrole_check(string url) {{
+		//	url = url.ToLower();
+		//	//Response.Write(url + ""<br>"");
+		//	if (url == ""/"" || url.IndexOf(""/default.aspx"") == 0) return true;
+		//	foreach(var role in this.LoginUser.Obj_sysroles) {{
+		//		//Response.Write(role.ToString());
+		//		foreach(var dir in role.Obj_sysdirs) {{
+		//			//Response.Write(""-----------------"" + dir.ToString() + ""<br>"");
+		//			string tmp = dir.Url;
+		//			if (tmp.EndsWith(""/"")) tmp += ""default.aspx"";
+		//			if (url.IndexOf(tmp) == 0) return true;
+		//		}}
+		//	}}
+		//	return false;
+		//}}
+		#endregion
+	}}
 }}
 
 #region 需要登陆、匿名访问、IgnoreObsoleteControllers、FormDataOperationFilter
@@ -1448,8 +1454,8 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using {0}.BLL;
 using {0}.Model;
 
-namespace {0}.Admin.ApiV0Controllers {{
-	[Route(""apiv0/[controller]"")]
+namespace {0}.AdminControllers {{
+	[Route(""[controller]"")]
 	[Obsolete]
 	public class SysController : Controller {{
 		[HttpGet(@""connection"")]
@@ -1521,49 +1527,52 @@ using NpgsqlTypes;
 using {0}.BLL;
 using {0}.Model;
 
-namespace {0}.Admin.ApiV0Controllers {{
-	[Route(""apiv0/[controller]"")]
-	[Obsolete]
+namespace {0}.AdminControllers {{
+	[Route(""[controller]"")]
 	public class {1}Controller : BaseAdminController {{
 		public {1}Controller(ILogger<{1}Controller> logger) : base(logger) {{ }}
 
 		[HttpGet]
-		public APIReturn Get_list([FromServices]IConfigurationRoot cfg, {12}[FromQuery] int limit = 20, [FromQuery] int skip = 0) {{
+		public ActionResult List([FromServices]IConfigurationRoot cfg, {12}[FromQuery] int limit = 20, [FromQuery] int page = 1) {{
 			var select = {1}.Select{8};{9}
 			int count;
-			var items = select.Count(out count){14}.Skip(skip).Limit(limit).ToList();
-			return APIReturn.成功.SetData(""items"", items.ToBson(), ""count"", count{15});
+			var items = select.Count(out count){14}.Skip((page - 1) * limit).Limit(limit).ToList();
+			ViewBag.items = items;
+			ViewBag.count = count;
+			return View();
 		}}
 
-		[HttpGet(@""{3}"")]
-		public APIReturn Get_item({4}) {{
+		[HttpGet(@""add"")]
+		public ActionResult Edit() {{
+			return View();
+		}}
+		[HttpGet(@""edit"")]
+		public ActionResult Edit({4}) {{
 			{1}Info item = {1}.GetItem({5});
-			if (item == null) return APIReturn.记录不存在_或者没有权限;
-			return APIReturn.成功.SetData(""item"", item.ToBson());
+			if (item == null) item = new {1}Info();
+			ViewBag.item = item;
+			return View();
 		}}
 
-		[HttpPost]
+		/***************************************** POST *****************************************/
+		[HttpPost(@""add"")]
 		[ValidateAntiForgeryToken]
-		public APIReturn Post_insert({10}) {{
+		public APIReturn Add({10}) {{
 			{1}Info item = new {1}Info();{13}{7}
 			item = {1}.Insert(item);{16}
 			return APIReturn.成功.SetData(""item"", item.ToBson());
 		}}
-
-		[HttpPut(""{3}"")]
-		public APIReturn Put_update({4}{11}) {{
+		[HttpPost(@""edit"")]
+		[ValidateAntiForgeryToken]
+		public APIReturn Edit({4}{11}) {{
 			{1}Info item = new {1}Info();{6}{7}
 			int affrows = {1}.Update(item);{17}
-			if (affrows > 0) return APIReturn.成功;
+			if (affrows > 0) return APIReturn.成功.SetMessage($""更新成功，影响行数：{{affrows}}"");
 			return APIReturn.失败;
 		}}
 
-		[HttpDelete(""{3}"")]
-		public APIReturn Delete_delete({4}) {{
-			int affrows = {1}.Delete({5});
-			if (affrows > 0) return APIReturn.成功.SetMessage($""删除成功，影响行数：{{affrows}}"");
-			return APIReturn.失败;
-		}}
+		[HttpPost(""del"")]
+		[ValidateAntiForgeryToken]{18}
 	}}
 }}
 ";
@@ -1674,8 +1683,8 @@ namespace {0}.Admin.ApiV0Controllers {{
 				<h1>这是一个测试首页</h1>
 				<h2>swagger webapi：<a href='/swagger/' target='_blank'>/swagger/</a><h2>
 
-				<h2><a href='/apiv0/sys/connection' target='_blank'>查看 Npgsql连接池</a><h2>
-				<h2><a href='/apiv0/sys/connection/redis' target='_blank'>查看 Redis连接池</a><h2>
+				<h2><a href='/sys/connection' target='_blank'>查看 Npgsql连接池</a><h2>
+				<h2><a href='/sys/connection/redis' target='_blank'>查看 Redis连接池</a><h2>
 			</section>
 			<!-- /.content-->
 		</div>
@@ -1759,6 +1768,7 @@ namespace {0}.Admin.ApiV0Controllers {{
 								query: qs_parseByUrl(refererUrl)
 							}};
 							top.mainViewInit = function () {{
+								if (!div) return setTimeout(top.mainViewInit, 10);
 								admin_init(function (selector) {{
 									if (/<[^>]+>/.test(selector)) return $(selector);
 									return div.find(selector);

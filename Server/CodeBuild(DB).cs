@@ -109,7 +109,7 @@ select
 ns.nspname || '.' || c.relname as id, 
 a.attname,
 t.typname,
-case when a.atttypmod > 0 then a.atttypmod - 4 else a.attlen end len,
+case when a.atttypmod > 0 and a.atttypmod < 32767 then a.atttypmod - 4 else a.attlen end len,
 case when t.typelem = 0 then t.typname else t2.typname end,
 case when a.attnotnull then 0 else 1 end as is_nullable,
 e.adsrc as is_identity,
