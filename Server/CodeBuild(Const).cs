@@ -1238,10 +1238,9 @@ namespace {0}.Admin {{
 						License = new License {{ Name = ""duoyi"", Url = ""http://duoyi.com"" }}
 					}});
 					options.IgnoreObsoleteActions();
-					//options.IgnoreObsoleteControllers();
-					// 类、方法标记 [Obsolete]，可以阻止【Swagger文档】生成
+					//options.IgnoreObsoleteControllers(); // 类、方法标记 [Obsolete]，可以阻止【Swagger文档】生成
 					options.DescribeAllEnumsAsStrings();
-					options.IncludeXmlComments(AppContext.BaseDirectory + @""/Admin.xml"");
+					//options.IncludeXmlComments(AppContext.BaseDirectory + @""/Admin.xml""); // 使用前需开启项目注释 xmldoc
 					options.OperationFilter<FormDataOperationFilter>();
 				}});
 			#endregion
@@ -1863,7 +1862,7 @@ namespace {0}.AdminControllers {{
 	""buildOptions"": {{
 		""emitEntryPoint"": true,
 		""preserveCompilationContext"": true,
-		""xmlDoc"": true
+		""xmlDoc"": false
 	}},
 
 	""runtimeOptions"": {{
