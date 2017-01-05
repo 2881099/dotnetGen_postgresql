@@ -1207,7 +1207,7 @@ namespace {0}.DAL {{
 			public SqlUpdateBuild Set{0}Flag(int _0_16{4}, bool isUnFlag = false) {{
 				_setQs.Enqueue(ni => _item.{0} = ni.{0});
 				{2} tmp1 = ({2})Math.Pow(2, _0_16);
-				return this.Set({7}@""""""{1}""""{5}"", $@""nullif(""""{1}""""{6},0) {{isUnFlag ? '^' : '|'}} @{1}_{{_parameters.Count}}"", 
+				return this.Set({7}@""""""{1}""""{5}"", $@""nullif(""""{1}""""{6},0) {{(isUnFlag ? '^' : '|')}} @{1}_{{_parameters.Count}}"", 
 					{3}tmp1 }});
 			}}
 			public SqlUpdateBuild Set{0}UnFlag(int _0_16{4}) {{
@@ -2035,7 +2035,7 @@ namespace {0}.BLL {{
 						string pkParses = "";
 						int pk_idx = 0;
 						foreach (ColumnInfo pk in table.PrimaryKeys) {
-							pkParses += ", " + string.Format(GetStringifyParse(pk.Type, pk.CsType), "vs[" + pk_idx++ + "]");
+							pkParses += ", " + string.Format(GetStringifyParse(pk.Type, pk.CsType).Replace(".Replace(StringifySplit, \"|\")", ""), "vs[" + pk_idx++ + "]");
 						}
 						pkParses = pkParses.Substring(2);
 						str_mvcdel = string.Format(@"
