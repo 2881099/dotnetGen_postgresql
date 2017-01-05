@@ -932,8 +932,8 @@ namespace {0}.Model {{
 
 				if (table.PrimaryKeys.Count > 0) {
 					if (table.Columns.Count > table.PrimaryKeys.Count) {
-						ColumnInfo colUpdateTime = table.Columns.Find(delegate (ColumnInfo fcc) { return fcc.Name.ToLower() == "update_time" || fcc.CsType == "DateTime"; });
-						ColumnInfo colCreateTime = table.Columns.Find(delegate (ColumnInfo fcc) { return fcc.Name.ToLower() == "create_time" || fcc.CsType == "DateTime"; });
+						ColumnInfo colUpdateTime = table.Columns.Find(delegate (ColumnInfo fcc) { return fcc.Name.ToLower() == "update_time" && fcc.CsType == "DateTime?"; });
+						ColumnInfo colCreateTime = table.Columns.Find(delegate (ColumnInfo fcc) { return fcc.Name.ToLower() == "create_time" && fcc.CsType == "DateTime?"; });
 						sb6.Insert(0, string.Format(@"
 		public {1}Info Save() {{{2}
 			if (this.{4} != null) {{
@@ -1101,9 +1101,6 @@ namespace {0}.DAL {{
 		}}");
 				sb1.Append(sb4.ToString());
 				sb1.AppendFormat(@"
-		public SelectBuild<{0}Info> Select {{
-			get {{ return SelectBuild<{0}Info>.From(this, PSqlHelper.Instance); }}
-		}}
 		#endregion", uClass_Name, table.Columns.Count + 1);
 				Dictionary<string, bool> del_exists = new Dictionary<string, bool>();
 				foreach (List<ColumnInfo> cs in table.Uniques) {
@@ -1132,11 +1129,6 @@ namespace {0}.DAL {{
 			return PSqlHelper.ExecuteNonQuery(string.Concat(TSQL.Delete, @""{1}""), 
 {3});
 		}}", parms, sqlParms, cs[0].IsPrimaryKey ? string.Empty : parmsBy, CodeBuild.AppendParameters(cs, "				"));
-
-					sb3.AppendFormat(@"
-		public {0}Info GetItem{3}({1}) {{
-			return this.Select.Where(@""{2}"", {4}).ToOne();
-		}}", uClass_Name, parms, sqlParmsA, cs[0].IsPrimaryKey ? string.Empty : parmsBy, sqlParmsANoneType);
 				}
 				table.ForeignKeys.ForEach(delegate (ForeignKeyInfo fkk) {
 					string parms = string.Empty;
@@ -1343,12 +1335,14 @@ namespace {0}.BLL {{
 					string parmsNodeTypeUpdateCacheRemove = string.Empty;
 					string cacheCond = string.Empty;
 					string cacheRemoveCode = string.Empty;
+					string whereCondi = string.Empty;
 					foreach (ColumnInfo columnInfo in cs) {
 						parms += columnInfo.CsType.Replace("?", "") + " " + CodeBuild.UFString(columnInfo.Name) + ", ";
 						parmsBy += CodeBuild.UFString(columnInfo.Name) + "And";
 						parmsNoneType += CodeBuild.UFString(columnInfo.Name) + ", ";
 						parmsNodeTypeUpdateCacheRemove += "item." + CodeBuild.UFString(columnInfo.Name) + ", \"_,_\", ";
 						cacheCond += CodeBuild.UFString(columnInfo.Name) + " == null || ";
+						whereCondi += string.Format(".Where{0}({0})", CodeBuild.UFString(columnInfo.Name));
 					}
 					parms = parms.Substring(0, parms.Length - 2);
 					parmsBy = parmsBy.Substring(0, parmsBy.Length - 3);
@@ -1367,17 +1361,17 @@ namespace {0}.BLL {{
 
 					sb3.AppendFormat(@"
 		public static {1}Info GetItem{2}({4}) {{
-			if (itemCacheTimeout <= 0) return dal.GetItem{2}({5});
+			if (itemCacheTimeout <= 0) return Select{7}.ToOne();
 			string key = string.Concat(""{0}_BLL_{1}{2}_"", {3});
 			string value = RedisHelper.Get(key);
 			if (!string.IsNullOrEmpty(value))
 				try {{ return {1}Info.Parse(value); }} catch {{ }}
-			{1}Info item = dal.GetItem{2}({5});
+			{1}Info item = Select{7}.ToOne();
 			if (item == null) return null;
 			RedisHelper.Set(key, item.Stringify(), itemCacheTimeout);
 			return item;
 		}}", solutionName, uClass_Name, cs[0].IsPrimaryKey ? string.Empty : parmsBy, parmsNodeTypeUpdateCacheRemove.Replace("item.", ""),
-		parms, parmsNoneType, cacheCond);
+		parms, parmsNoneType, cacheCond, whereCondi);
 
 					sb4.AppendFormat(@"
 			RedisHelper.Remove(string.Concat(""{0}_BLL_{1}{2}_"", {3}));", solutionName, uClass_Name, cs[0].IsPrimaryKey ? string.Empty : parmsBy, parmsNodeTypeUpdateCacheRemove);
@@ -1622,7 +1616,7 @@ namespace {0}.BLL {{
 						sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}(params {2}[] {1}) {{
 			return this.Where1Or(@""a.""""{3}"""" = {{0}}"", {1});
-		}}", uClass_Name, fkcsBy, csType.Replace("?", ""), col.Name);
+		}}", uClass_Name, fkcsBy, csType, col.Name);
 						return;
 					}
 					if (col.Type == NpgsqlDbType.Smallint || col.Type == NpgsqlDbType.Integer || col.Type == NpgsqlDbType.Bigint ||
@@ -1630,7 +1624,7 @@ namespace {0}.BLL {{
 						sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}(params {2}[] {1}) {{
 			return this.Where1Or(@""a.""""{3}"""" = {{0}}"", {1});
-		}}", uClass_Name, fkcsBy, csType.Replace("?", ""), col.Name);
+		}}", uClass_Name, fkcsBy, csType, col.Name);
 						sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}Range({2} begin) {{
 			return base.Where(@""a.""""{3}"""" >= {{0}}"", begin) as {0}SelectBuild;
@@ -1991,7 +1985,7 @@ namespace {0}.BLL {{
 			{{ name: '{0}', field: '{4}', text: @Html.Raw(JsonConvert.SerializeObject(fk_{1}s.Select(a => a.{2}))), value: @Html.Raw(JsonConvert.SerializeObject(fk_{1}s.Select(a => a.{3}))) }},",
 			CodeBuild.UFString(fk2[0].ReferencedTable.ClassName), CodeBuild.LFString(fk2[0].ReferencedTable.ClassName),
 			string.IsNullOrEmpty(strName) ? "ToString()" : strName.TrimStart('.'), CodeBuild.UFString(fk2[0].ReferencedColumns[0].Name), CodeBuild.UFString(fk2[0].Columns[0].Name));
-					//add.html 标签关联
+						//add.html 标签关联
 						itemCsParamInsertForm += string.Format(", [FromForm] {0}[] mn_{1}", fk2[0].ReferencedColumns[0].CsType.Replace("?", ""), CodeBuild.UFString(addname));
 						itemCsParamUpdateForm += string.Format(", [FromForm] {0}[] mn_{1}", fk2[0].ReferencedColumns[0].CsType.Replace("?", ""), CodeBuild.UFString(addname));
 						str_controller_insert_mn += string.Format(@"
@@ -2375,7 +2369,7 @@ namespace {0}.BLL {{
 							<td>{1}</td>
 							<td>
 								<select name=""{0}""{3}
-									@foreach (object eo in Enum.GetValues(typeof({2}))) {{ <option value=""@Convert.ToInt64(eo)"">@eo</option> }}
+									@foreach (object eo in Enum.GetValues(typeof({2}))) {{ <option value=""@eo"">@eo</option> }}
 								</select>
 							</td>
 						</tr>", csUName, comment, GetCSType(col.Type, 0, col.SqlType).Replace("?", ""), col.Attndims > 0 ? string.Format(@" data-placeholder=""Select a {0}"" class=""form-control select2"" multiple>", comment) : @"><option value="""">------ 请选择 ------</option>");

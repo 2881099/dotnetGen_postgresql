@@ -1208,6 +1208,12 @@ namespace {0}.Admin {{
 
 			this.Configuration = builder.AddEnvironmentVariables().Build();
 			this.env = env;
+
+			Newtonsoft.Json.JsonConvert.DefaultSettings = () => {{
+				var st = new Newtonsoft.Json.JsonSerializerSettings();
+				st.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
+				return st;
+			}};
 		}}
 
 		public IConfigurationRoot Configuration {{ get; }}
