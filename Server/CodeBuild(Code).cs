@@ -1563,15 +1563,15 @@ namespace {0}.BLL {{
 						_f8 = fk.Columns[0].Name;
 						_f9 = fk2[0].Table.PrimaryKeys[0].CsType.Replace("?", "");
 					}
-					sb6.AppendFormat(@"
+				sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}(params {2}Info[] items) {{
 			if (items == null) return this;
-			return Where{1}_{7}(items.Where<{2}Info>(a => a != null).Select<{2}Info, {9}>(a => a.{3}).ToArray());
+			return Where{1}_{7}(items.Where<{2}Info>(a => a != null).Select(a => a.{3}).ToArray());
 		}}
 		public {0}SelectBuild Where{1}_{7}(params {9}[] ids) {{
 			if (ids == null || ids.Length == 0) return this;
 			return base.Where(string.Format(@""EXISTS( SELECT """"{6}"""" FROM {4}""""{5}"""" WHERE """"{6}"""" = a.""""{7}"""" AND """"{8}"""" IN ({{0}}) )"", string.Join<{9}>("","", ids))) as {0}SelectBuild;
-		}}", uClass_Name, fkcsBy, orgInfo, civ, string.Empty,  t2.FullName, _f6, _f7, _f8, _f9);
+		}}", uClass_Name, fkcsBy, orgInfo, civ, string.IsNullOrEmpty(t2.Owner) ? "" : (@"""""" + t2.Owner + @"""""."), t2.Name, _f6, _f7, _f8, _f9);
 				});
 
 				table.Columns.ForEach(delegate (ColumnInfo col) {
@@ -1764,13 +1764,13 @@ namespace {0}.BLL {{
 					byte str_controller_list_join_alias = 97;
 					string str_listCms2FilterFK = "";
 					string str_listCms2FilterFK_fkitems = "";
-					int str_listCms2FilterAjaxs = 0;
 					string keyLikes = string.Empty;
 					string getListParamQuery = "";
 					bool ttfk_flag = false;
 					string str_addhtml_mn = "";
 					string str_controller_insert_mn = "";
 					string str_controller_update_mn = "";
+					string str_fk_getlist = "";
 					string str_addjs_mn_initUI = "";
 					foreach (ColumnInfo col in table.Columns) {
 						List<ColumnInfo> us = table.Uniques.Find(delegate (List<ColumnInfo> cs) {
@@ -1840,32 +1840,38 @@ namespace {0}.BLL {{
 							str_listTh += string.Format(@"<th scope=""col"">{0}</th>
 						", comment);
 							str_listTd += string.Format(@"<td>[@item.{0}] @item.Obj_{1}{2}</td>
-							", csUName, memberName, strName);
+								", csUName, memberName, string.IsNullOrEmpty(strName) ? "" : ("?" + strName));
 							str_controller_list_join += string.Format(@"
-				.InnerJoin<{0}>(""{3}"", ""{3}.{1} = a.{2}"")", CodeBuild.UFString(fks[0].ReferencedTable.ClassName), fks[0].ReferencedColumns[0].Name, fks[0].Columns[0].Name, (char)++str_controller_list_join_alias);
-							str_listCms2FilterFK_fkitems += string.Format(@"
-	List<{0}Info> fk_{1}s = {0}.Select.ToList();", CodeBuild.UFString(fks[0].ReferencedTable.ClassName), CodeBuild.LFString(fks[0].ReferencedTable.ClassName));
+				.LeftJoin<{0}>(""{3}"", ""{3}.{1} = a.{2}"")", CodeBuild.UFString(fks[0].ReferencedTable.ClassName), fks[0].ReferencedColumns[0].Name, fks[0].Columns[0].Name, (char)++str_controller_list_join_alias);
+							if (str_listCms2FilterFK_fkitems.Contains("	var fk_" + CodeBuild.LFString(fks[0].ReferencedTable.ClassName) + "s = ") == false)
+								str_listCms2FilterFK_fkitems += string.Format(@"
+	var fk_{1}s = {0}.Select.ToList();", CodeBuild.UFString(fks[0].ReferencedTable.ClassName), CodeBuild.LFString(fks[0].ReferencedTable.ClassName));
 							str_listCms2FilterFK += string.Format(@"
-			{{ name: '{0}', field: '{4}', text: '@string.Join("","", fk_{1}s.Select(a => a.{2}).ToArray())', value: '@string.Join("","", fk_{1}s.Select(a => a.{3}).ToArray())' }},", 
+			{{ name: '{0}', field: '{4}', text: @Html.Raw(JsonConvert.SerializeObject(fk_{1}s.Select(a => a.{2}))), value: @Html.Raw(JsonConvert.SerializeObject(fk_{1}s.Select(a => a.{3}))) }},", 
 				CodeBuild.UFString(fks[0].ReferencedTable.ClassName), CodeBuild.LFString(fks[0].ReferencedTable.ClassName), 
-				strName.TrimStart('.'), CodeBuild.UFString(fks[0].ReferencedColumns[0].Name), CodeBuild.UFString(fks[0].Columns[0].Name));
+				string.IsNullOrEmpty(strName) ? "ToString()" : strName.TrimStart('.'), CodeBuild.UFString(fks[0].ReferencedColumns[0].Name), CodeBuild.UFString(fks[0].Columns[0].Name));
 						} else if (csType == "string" && !ttfk_flag) {
 							ttfk_flag = true;
 							string t1 = string.Format(@"<th scope=""col"">{0}</th>
 						", comment);
 							string t2 = string.Format(@"<td>@item.{0}</td>
-							", csUName);
+								", csUName);
 							str_listTh1 += t1;
 							str_listTd1 += t2;
 							if (ttfk == null || ttfk.Columns[0].Name.ToLower() != "parent_id") {
 								str_listTh += t1;
 								str_listTd += t2;
 							}
+						} else if (col.Attndims > 0 || col.Type == NpgsqlDbType.Composite) {
+							str_listTh += string.Format(@"<th scope=""col"">{0}</th>
+						", comment);
+							str_listTd += string.Format(@"<td>@JsonConvert.SerializeObject(item.{0})</td>
+								", csUName);
 						} else {
 							str_listTh += string.Format(@"<th scope=""col"">{0}</th>
 						", comment);
 							str_listTd += string.Format(@"<td>@item.{0}</td>
-							", csUName);
+								", csUName);
 						}
 					}
 					if (keyLikes.Length > 0) {
@@ -1886,8 +1892,8 @@ namespace {0}.BLL {{
 						string csType = col88.CsType;
 
 						if (col88.IsPrimaryKey) {
-							itemSetValuePK += string.Format(@"
-			item.{0} = {0};", csUName);
+			//				itemSetValuePK += string.Format(@"
+			//item.{0} = {0};", csUName);
 							if (col88.IsIdentity) ;
 							else {
 								itemSetValuePKInsert += string.Format(@"
@@ -1895,6 +1901,27 @@ namespace {0}.BLL {{
 								itemCsParamInsertForm += string.Format(", [FromForm] {0} {1}", csType, csUName);
 							}
 						} else if (col88.IsIdentity) {
+						} else if ((csLName == "img" || csLName.StartsWith("img_") || csLName.EndsWith("_img") ||
+							csLName == "path" || csLName.StartsWith("path_") || csLName.EndsWith("_path")) && (col88.Type == NpgsqlDbType.Varchar || col88.Type == NpgsqlDbType.Char)) {
+							//图片字段
+							itemCsParamInsertForm += string.Format(", [FromForm] {0} {1}, [FromForm] IFormFile {1}_file", csType, csUName);
+							itemCsParamUpdateForm += string.Format(", [FromForm] {0} {1}, [FromForm] IFormFile {1}_file", csType, csUName);
+							itemSetValuePKInsert += string.Format(@"
+			if ({1}_file != null) {{
+				item.{1} = $""/upload/{{Guid.NewGuid().ToString()}}.png"";
+				using (FileStream fs = new FileStream(System.IO.Path.Combine(AppContext.BaseDirectory, item.{1}), FileMode.Create)) {1}_file.CopyTo(fs);
+			}} else
+				item.{1} = {1};", "", csUName);
+							itemSetValuePK += string.Format(@"
+			if (!string.IsNullOrEmpty(item.{1}) && (item.{1} != {1} || {1}_file != null)) {{
+				string path = System.IO.Path.Combine(AppContext.BaseDirectory, item.{1});
+				if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
+			}}
+			if ({1}_file != null) {{
+				item.{1} = $""/upload/{{Guid.NewGuid().ToString()}}.png"";
+				using (FileStream fs = new FileStream(System.IO.Path.Combine(AppContext.BaseDirectory, item.{1}), FileMode.Create)) {1}_file.CopyTo(fs);
+			}} else
+				item.{1} = {1};", "", csUName);
 						} else {
 							string colvalue = "";
 							if (csType == "DateTime?" && (
@@ -1957,12 +1984,13 @@ namespace {0}.BLL {{
 						getListParamQuery += string.Format(@"[FromQuery] {0}[] {1}_{2}, ", fk2[0].ReferencedTable.PrimaryKeys[0].CsType.Replace("?", ""), CodeBuild.UFString(addname), table.PrimaryKeys[0].Name);
 						sb3.AppendFormat(@"
 			if ({0}_{1}.Length > 0) select.Where{0}_{1}({0}_{1});", CodeBuild.UFString(addname), table.PrimaryKeys[0].Name);
-						str_listCms2FilterFK_fkitems += string.Format(@"
-	List<{0}Info> fk_{1}s = {0}.Select.ToList();", CodeBuild.UFString(fk2[0].ReferencedTable.ClassName), CodeBuild.LFString(fk2[0].ReferencedTable.ClassName));
+						if (str_listCms2FilterFK_fkitems.Contains("	var fk_" + CodeBuild.LFString(fk2[0].ReferencedTable.ClassName) + "s = ") == false)
+							str_listCms2FilterFK_fkitems += string.Format(@"
+	var fk_{1}s = {0}.Select.ToList();", CodeBuild.UFString(fk2[0].ReferencedTable.ClassName), CodeBuild.LFString(fk2[0].ReferencedTable.ClassName));
 						str_listCms2FilterFK += string.Format(@"
-			{{ name: '{0}', field: '{4}', text: '@string.Join("","", fk_{1}s.Select(a => a.{2}).ToArray())', value: '@string.Join("","", fk_{1}s.Select(a => a.{3}).ToArray())' }},",
+			{{ name: '{0}', field: '{4}', text: @Html.Raw(JsonConvert.SerializeObject(fk_{1}s.Select(a => a.{2}))), value: @Html.Raw(JsonConvert.SerializeObject(fk_{1}s.Select(a => a.{3}))) }},",
 			CodeBuild.UFString(fk2[0].ReferencedTable.ClassName), CodeBuild.LFString(fk2[0].ReferencedTable.ClassName),
-			strName.TrimStart('.'), CodeBuild.UFString(fk2[0].ReferencedColumns[0].Name), CodeBuild.UFString(fk2[0].Columns[0].Name));
+			string.IsNullOrEmpty(strName) ? "ToString()" : strName.TrimStart('.'), CodeBuild.UFString(fk2[0].ReferencedColumns[0].Name), CodeBuild.UFString(fk2[0].Columns[0].Name));
 					//add.html 标签关联
 						itemCsParamInsertForm += string.Format(", [FromForm] {0}[] mn_{1}", fk2[0].ReferencedColumns[0].CsType.Replace("?", ""), CodeBuild.UFString(addname));
 						itemCsParamUpdateForm += string.Format(", [FromForm] {0}[] mn_{1}", fk2[0].ReferencedColumns[0].CsType.Replace("?", ""), CodeBuild.UFString(addname));
@@ -1988,19 +2016,21 @@ namespace {0}.BLL {{
 							<td>{1}</td>
 							<td>
 								<select name=""mn_{2}"" data-placeholder=""Select a {3}"" class=""form-control select2"" multiple>
-									@foreach ({0}Info fktag in fk_{1}s) {{ <option value=""@fktag.{4}"">@fktag.{5}</option> }}
+									@foreach ({0}Info fk in fk_{1}s) {{ <option value=""@fk.{4}"">@fk.{5}</option> }}
 								</select>
 							</td>
 						</tr>", CodeBuild.UFString(fk2[0].ReferencedTable.ClassName), CodeBuild.LFString(fk2[0].ReferencedTable.ClassName),
 							CodeBuild.UFString(addname), CodeBuild.LFString(addname), CodeBuild.UFString(fk2[0].ReferencedColumns[0].Name), strName);
-
+						if (str_fk_getlist.Contains("	var fk_" + CodeBuild.LFString(fk2[0].ReferencedTable.ClassName) + "s") == false)
+							str_fk_getlist += string.Format(@"
+	var fk_{1}s = {0}.Select.ToList();", CodeBuild.UFString(fk2[0].ReferencedTable.ClassName), CodeBuild.LFString(fk2[0].ReferencedTable.ClassName));
 						str_addjs_mn_initUI += string.Format(@"
-		data.mn_{0} = @Html.Raw(item.Obj_{2}s.ToJson());
-		for (var a = 0; a < data.mn_{0}.length; a++) $(form.mn_{0}).find('option[value=""{{0}}""]'.format(data.mn_{0}[a].{1})).attr('selected', 'selected');", CodeBuild.UFString(addname), CodeBuild.UFString(fk2[0].ReferencedColumns[0].Name), CodeBuild.LFString(addname));
+			item.mn_{0} = @Html.Raw(item.Obj_{2}s.ToJson());
+			for (var a = 0; a < item.mn_{0}.length; a++) $(form.mn_{0}).find('option[value=""{{0}}""]'.format(item.mn_{0}[a].{1})).attr('selected', 'selected');", CodeBuild.UFString(addname), CodeBuild.UFString(fk2[0].ReferencedColumns[0].Name), CodeBuild.LFString(addname));
 					});
 
 					string str_mvcdel = string.Format(@"
-		public APIReturn Delete([FromForm] {2}[] ids) {{
+		public APIReturn _Del([FromForm] {2}[] ids) {{
 			int affrows = 0;
 			foreach ({2} id in ids)
 				affrows += {1}.Delete(id);
@@ -2015,7 +2045,7 @@ namespace {0}.BLL {{
 						}
 						pkParses = pkParses.Substring(2);
 						str_mvcdel = string.Format(@"
-		public APIReturn Delete([FromForm] string[] ids) {{
+		public APIReturn _Del([FromForm] string[] ids) {{
 			int affrows = 0;
 			foreach (string id in ids) {{
 				string[] vs = id.Split(',');
@@ -2057,7 +2087,7 @@ namespace {0}.BLL {{
 								string urlQuerys = string.Empty;
 								ffk.Columns.ForEach(delegate (ColumnInfo col88) {
 									string FFK_csUName = CodeBuild.UFString(col.Name);
-									urlQuerys += string.Format("{0}={{#a.{1}}}&", CodeBuild.UFString(col88.Name), FFK_csUName);
+									urlQuerys += string.Format("{0}=@item.{1}&", CodeBuild.UFString(col88.Name), FFK_csUName);
 								});
 								if (urlQuerys.Length > 0) urlQuerys = urlQuerys.Remove(urlQuerys.Length - 1);
 
@@ -2074,7 +2104,6 @@ namespace {0}.BLL {{
 <div class=""box"">
 	<div class=""box-header with-border"">
 		<h3 id=""box-title"" class=""box-title""></h3>
-		<a href=""./"" class=""btn btn-primary"">重置筛选</a>
 		<span class=""form-group mr15""></span><a href=""./add"" data-toggle=""modal"" class=""btn btn-success pull-right"">添加</a>
 	</div>
 	<div class=""box-body"">
@@ -2156,7 +2185,7 @@ namespace {0}.BLL {{
 					</tr>
 					<tbody>
 						@foreach({0}Info item in ViewBag.items) {{
-							<tr data-tt-id=""{{#{1}}}"" data-tt-parent-id=""{{#{2}}}"">
+							<tr data-tt-id=""@item.{1}"" data-tt-parent-id=""@item.{2}"">
 								{9}{7}<td><a href=""./edit?{4}"">修改</a></td>
 								<td><input id=""id"" name=""id"" type=""checkbox"" value=""{5}"" /></td>
 							</tr>
@@ -2164,7 +2193,6 @@ namespace {0}.BLL {{
 					</tbody>
 				</table>
 			</form>
-			<a id=""btn_delete_sel"" href=""#"" class=""btn btn-danger pull-right"">删除选中项</a>
 		</div>
 	</div>
 </div>
@@ -2187,7 +2215,7 @@ namespace {0}.BLL {{
 	}})();
 </script>", uClass_Name, CodeBuild.UFString(table.PrimaryKeys[0].Name), CodeBuild.UFString(ttfk.Columns[0].Name), "", 
 	pkUrlQuerys.Replace("a.", ""), pkHiddens.Replace("a.", ""), str_listTh.Replace("a.", ""), str_listTd.Replace("a.", ""), str_listTh1.Replace("a.", ""), str_listTd1.Replace("a.", ""));
-						loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"Viwes\Admin\", uClass_Name, @"\List.cshtml"), Deflate.Compress(sb1.ToString())));
+						loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"Views\Admin\", uClass_Name, @"\List.cshtml"), Deflate.Compress(sb1.ToString())));
 						clearSb();
 						#endregion
 					}
@@ -2213,19 +2241,17 @@ namespace {0}.BLL {{
 							sb4.AppendFormat(@"
 						<tr>
 							<td>{1}</td>
-							<td id=""{0}_td""><input name=""{0}"" type=""checkbox"" value=""1"" /></td>
+							<td id=""{0}_td""><input name=""{0}"" type=""checkbox"" value=""true"" /></td>
 						</tr>", csUName, comment);
 						} else if (csType == "DateTime?" && (
 							string.Compare(lname, "create_time", true) == 0 ||
 							string.Compare(lname, "update_time", true) == 0
 							)) {
-							sb4.AppendFormat(@"
-						@if (item != null) {{
+							sb14.AppendFormat(@"
 							<tr>
 								<td>{1}</td>
 								<td><input name=""{0}"" type=""text"" readonly class=""datepicker"" style=""width:20%;background-color:#ddd;"" /></td>
-							</tr>
-						}}", csUName, comment);
+							</tr>", csUName, comment);
 						} else if (col.IsPrimaryKey && col.IsIdentity) {
 							//主键自动增值
 							sb4.AppendFormat(@"
@@ -2273,13 +2299,14 @@ namespace {0}.BLL {{
 							<td>
 								<select name=""{0}"">
 									<option value="""">------ 请选择 ------</option>
-									@foreach (var fk in fk_{4}s) {{ <option value=""@item.{2}"">@item.{3}</option> }}
+									@foreach (var fk in fk_{4}s) {{ <option value=""@fk.{2}"">@fk.{3}</option> }}
 								</select>
 							</td>
 						</tr>", csUName, comment, CodeBuild.UFString(fkcb.ReferencedColumns[0].Name), FK_Column_Text, FK_uClass_Name);
 							}
-							sb6.AppendFormat(@"
-	var fk_{0}s = BLL.{0}.Select.ToList();", FK_uClass_Name);
+							if (str_fk_getlist.Contains("	var fk_" + FK_uClass_Name + "s") == false)
+								str_fk_getlist += string.Format(@"
+	var fk_{0}s = {0}.Select.ToList();", FK_uClass_Name);
 						} else if ((col.Type == NpgsqlDbType.Integer || col.Type == NpgsqlDbType.Bigint) && (lname == "status" || lname.StartsWith("status_") || lname.EndsWith("_status"))) {
 							//加载 multi 多状态字段
 							sb4.AppendFormat(@"
@@ -2287,13 +2314,13 @@ namespace {0}.BLL {{
 							<td>{1}</td>
 							<td><input name=""{0}"" type=""hidden"" multi_status=""状态1,状态2,状态3,状态4,状态5"" /></td>
 						</tr>", csUName, comment);
-						} else if (col.Type == NpgsqlDbType.Smallint || col.Type == NpgsqlDbType.Integer || col.Type == NpgsqlDbType.Bigint) {
+						} else if (col.Attndims == 0 && (col.Type == NpgsqlDbType.Smallint || col.Type == NpgsqlDbType.Integer || col.Type == NpgsqlDbType.Bigint)) {
 							sb4.AppendFormat(@"
 						<tr>
 							<td>{1}</td>
 							<td><input name=""{0}"" type=""text"" class=""form-control"" data-inputmask=""'mask': '9', 'repeat': 6, 'greedy': false"" data-mask style=""width:200px;"" /></td>
 						</tr>", csUName, comment);
-						} else if (col.Type == NpgsqlDbType.Numeric || col.Type == NpgsqlDbType.Real || col.Type == NpgsqlDbType.Double || col.Type == NpgsqlDbType.Money) {
+						} else if (col.Attndims == 0 && (col.Type == NpgsqlDbType.Numeric || col.Type == NpgsqlDbType.Real || col.Type == NpgsqlDbType.Double || col.Type == NpgsqlDbType.Money)) {
 							sb4.AppendFormat(@"
 						<tr>
 							<td>{1}</td>
@@ -2324,6 +2351,17 @@ namespace {0}.BLL {{
 								</div>
 							</td>
 						</tr>", csUName, comment);
+						} else if ((lname == "img" || lname.StartsWith("img_") || lname.EndsWith("_img") ||
+							lname == "path" || lname.StartsWith("path_") || lname.EndsWith("_path")) && (col.Type == NpgsqlDbType.Varchar || col.Type == NpgsqlDbType.Char)) {
+							//图片字段
+							sb4.AppendFormat(@"
+						<tr>
+							<td>{1}</td>
+							<td>
+								<input name=""{0}"" type=""text"" class=""datepicker"" style=""width:60%;"" />
+								<input name=""{0}_file"" type=""file"">
+							</td>
+						</tr>", csUName, comment);
 						} else if (col.Type == NpgsqlDbType.Text) {
 							//加载百度编辑器
 							sb4.AppendFormat(@"
@@ -2336,12 +2374,14 @@ namespace {0}.BLL {{
 						<tr>
 							<td>{1}</td>
 							<td>
-								<select name=""{0}"">
-									<option value="""">------ 请选择 ------</option>
-									@foreach (string en in Enum.GetNames(typeof(2))) {{ <option value=""@en"">@en</option> }}
+								<select name=""{0}""{3}
+									@foreach (object eo in Enum.GetValues(typeof({2}))) {{ <option value=""@Convert.ToInt64(eo)"">@eo</option> }}
 								</select>
 							</td>
-						</tr>", csUName, comment, col.CsType.Replace("?", ""));
+						</tr>", csUName, comment, GetCSType(col.Type, 0, col.SqlType).Replace("?", ""), col.Attndims > 0 ? string.Format(@" data-placeholder=""Select a {0}"" class=""form-control select2"" multiple>", comment) : @"><option value="""">------ 请选择 ------</option>");
+							if (col.Attndims > 0)
+								str_addjs_mn_initUI += string.Format(@"
+			if (item.{0}) for (var a = 0; a < item.{0}.length; a++) $(form.{0}).find('option[value=""{{0}}""]'.format(item.{0}[a])).attr('selected', 'selected');", csUName);
 						} else {
 							sb4.AppendFormat(@"
 						<tr>
@@ -2351,10 +2391,16 @@ namespace {0}.BLL {{
 						}
 					}
 					sb4.Append(str_addhtml_mn);
+					if (sb14.ToString().Length > 0) {
+						sb14.Insert(0, @"
+						@if (item != null) {");
+						sb14.Append(@"
+						}");
+					}
 
 					sb1.AppendFormat(@"@{{
 	Layout = """";
-	{0}Info item = ViewBag.item;
+	{0}Info item = ViewBag.item;{3}
 }}
 
 <div class=""box"">
@@ -2367,7 +2413,7 @@ namespace {0}.BLL {{
 				@Html.AntiForgeryToken()
 				<input type=""hidden"" name=""__callback"" value=""edit_callback"" />
 				<div>
-					<table cellspacing=""0"" rules=""all"" class=""table table-bordered table-hover"" border=""1"" style=""border-collapse:collapse;"">{1}
+					<table cellspacing=""0"" rules=""all"" class=""table table-bordered table-hover"" border=""1"" style=""border-collapse:collapse;"">{1}{5}
 						<tr>
 							<td width=""8%"">&nbsp</td>
 							<td><input type=""submit"" value=""@(item == null ? ""添加"" : ""更新"")"" />&nbsp;<input type=""button"" value=""取消"" /></td>
@@ -2380,8 +2426,6 @@ namespace {0}.BLL {{
 	</div>
 </div>
 
-@{{{3}
-}}
 <script type=""text/javascript"">
 	(function () {{
 		top.edit_callback = function (rt) {{
@@ -2390,11 +2434,16 @@ namespace {0}.BLL {{
 		}};
 {2}
 		var form = $('#form_add')[0];
-		var item = @Html.Raw(item == null ? ""null"" : item.ToJson());
-		fillForm(form, item);{4}
+		var item = null;
+		@if (item != null) {{
+			<text>
+			item = @Html.Raw(item.ToJson());
+			fillForm(form, item);{4}
+			</text>
+		}}
 		top.mainViewInit();
 	}})();
-</script>", uClass_Name, sb4.ToString(), sb5.ToString(), sb6.ToString(), str_addjs_mn_initUI);
+</script>", uClass_Name, sb4.ToString(), sb5.ToString(), str_fk_getlist, str_addjs_mn_initUI, sb14.ToString());
 					loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"Views\Admin\", uClass_Name, @"\Edit.cshtml"), Deflate.Compress(sb1.ToString())));
 					clearSb();
 					#endregion
