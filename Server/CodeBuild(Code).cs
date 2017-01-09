@@ -306,7 +306,7 @@ where a.typtype = 'e' and ns.nspname in ('{0}')", string.Join("','", owners.ToAr
 				bool isFirst = !_types.ContainsKey(dr1);
 				if (isFirst) _types.Add(dr1, "");
 
-				string str2 = UFString(dr2);
+				string str2 = dr2;
 				if (Regex.IsMatch(str2, @"^[\u0391-\uFFE5a-zA-Z_\$][\u0391-\uFFE5a-zA-Z_\$\d]*$"))
 					_types[dr1] += ", " + str2;
 				else
@@ -320,7 +320,7 @@ where a.typtype = 'e' and ns.nspname in ('{0}')", string.Join("','", owners.ToAr
 				if (isFirst) {
 					_types[dr1] += " = 1";
 					PSqlHelperMapTypeGlobally += string.Format(@"
-			NpgsqlConnection.MapEnumGlobally<Model.{0}ENUM>(""{1}"");", dr1, dr[0]);
+			NpgsqlConnection.MapEnumGlobally<Model.{0}ENUM>(""{1}"", nameTranslator);", dr1, dr[0]);
 				}
 			}
 			string code = string.Format(@"using System;
@@ -2460,17 +2460,15 @@ namespace {0}.BLL {{
 			loc1.Add(new BuildInfo(string.Concat(CONST.corePath, solutionName, @".db\Model\", basicName, @"\_ExtensionMethods.cs"), Deflate.Compress(sb1.ToString())));
 			clearSb();
 			#endregion
+			#region DBUtility/PSqlHelper.cs
+			sb1.AppendFormat(CONST.DAL_DBUtility_PSqlHelper_cs, solutionName, connectionStringName, PSqlHelperMapTypeGlobally);
+			loc1.Add(new BuildInfo(string.Concat(CONST.corePath, solutionName, @".db\DAL\DBUtility\PSqlHelper.cs"), Deflate.Compress(sb1.ToString())));
+			clearSb();
+			#endregion
 
 			if (isSolution) {
 
 				#region db.xproj
-
-				#region DBUtility/PSqlHelper.cs
-				sb1.AppendFormat(CONST.DAL_DBUtility_PSqlHelper_cs, solutionName, connectionStringName, PSqlHelperMapTypeGlobally);
-				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, solutionName, @".db\DAL\DBUtility\PSqlHelper.cs"), Deflate.Compress(sb1.ToString())));
-				clearSb();
-				#endregion
-
 				sb1.AppendFormat(CONST.xproj, dbGuid, solutionName + ".db");
 				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, solutionName, @".db\", solutionName, ".db.xproj"), Deflate.Compress(sb1.ToString())));
 				clearSb();

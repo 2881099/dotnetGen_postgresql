@@ -127,7 +127,12 @@ namespace {0}.DAL {{
 			}}
 		}}
 		public static Executer Instance {{ get; }} = new Executer(new LoggerFactory().CreateLogger(""{0}_DAL_sqlhelper""), ConnectionString);
-		static PSqlHelper() {{{2}
+		static PSqlHelper() {{
+			var nameTranslator = new NpgsqlMapNameTranslator();{2}
+		}}
+		public class NpgsqlMapNameTranslator : INpgsqlNameTranslator {{
+			public string TranslateMemberName(string clrName) => clrName;
+			public string TranslateTypeName(string clrName) => clrName;
 		}}
 
 		public static string Addslashes(string filter, params object[] parms) {{ return Executer.Addslashes(filter, parms); }}
