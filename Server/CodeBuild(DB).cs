@@ -77,7 +77,7 @@ a.relname,
 'V'
 from pg_class a
 inner join pg_namespace b on b.oid = a.relnamespace
-where b.nspname not in ('pg_catalog', 'information_schema') and a.relkind = 'v'
+where b.nspname not in ('pg_catalog', 'information_schema') and a.relkind in ('m','v')
 "));
 			if (ds == null) return loc1;
 
