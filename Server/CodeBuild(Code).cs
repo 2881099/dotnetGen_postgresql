@@ -2019,7 +2019,7 @@ namespace {0}.BLL {{
 						string pkParses = "";
 						int pk_idx = 0;
 						foreach (ColumnInfo pk in table.PrimaryKeys) {
-							pkParses += ", " + string.Format(GetStringifyParse(pk.Type, pk.CsType).Replace(".Replace(StringifySplit, \"|\")", ""), "vs[" + pk_idx++ + "]");
+							pkParses += ", " + string.Format(GetStringifyParse(pk.Type, pk.CsType.TrimEnd('?')).Replace(".Replace(StringifySplit, \"|\")", ""), "vs[" + pk_idx++ + "]");
 						}
 						pkParses = pkParses.Substring(2);
 						str_mvcdel = string.Format(@"
