@@ -324,6 +324,7 @@ where a.typtype = 'e' and ns.nspname in ('{0}')", string.Join("','", owners.ToAr
 				}
 			}
 			string code = string.Format(@"using System;
+using NpgsqlTypes;
 
 namespace {0}.Model {{
 ", solutionName);
@@ -2500,6 +2501,16 @@ namespace {0}.BLL {{
 				#region SysController.cs
 				sb1.AppendFormat(CONST.Admin_Controllers_SysController, solutionName, string.Join(string.Empty, admin_controllers_syscontroller_init_sysdir.ToArray()));
 				loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"AdminControllers\SysController.cs"), Deflate.Compress(sb1.ToString())));
+				clearSb();
+				#endregion
+				#region LoginController.cs
+				sb1.AppendFormat(CONST.Admin_Controllers_LoginController, solutionName);
+				loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"AdminControllers\LoginController.cs"), Deflate.Compress(sb1.ToString())));
+				clearSb();
+				#endregion
+				#region Views\Admin\Login\Index.cshtml
+				sb1.AppendFormat(CONST.Admin_Views_Admin_Login_Index_cshtml, solutionName);
+				loc1.Add(new BuildInfo(string.Concat(CONST.adminPath, @"Views\Admin\Login\Index.cshtml"), Deflate.Compress(sb1.ToString())));
 				clearSb();
 				#endregion
 				#region Admin.xproj
