@@ -1635,7 +1635,7 @@ namespace {0}.Module.Admin.Controllers {{
 	(function () {{
 		var msgtpl = $('#error_msg').html();
 		top.login_callback = function (rt) {{
-			if (rt.success) return location.href = './';
+			if (rt.success) return location.href = '/module/admin/';
 			$('#error_msg').html(msgtpl.format(rt.message)).show();
 			$('div.login-box-body').addClass('login-box-body--has-errors');
 			setTimeout(function () {{
