@@ -2166,7 +2166,7 @@ namespace {0}.BLL {{
 	}})();
 </script>
 ", uClass_Name, pkUrlQuerys, pkHiddens, str_listTh, str_listTd, str_listCms2FilterFK, str_listCms2FilterFK_fkitems);
-						loc1.Add(new BuildInfo(string.Concat(CONST.moduleAdminPath, @"Views\Admin\", uClass_Name, @"\List.cshtml"), Deflate.Compress(sb1.ToString())));
+						loc1.Add(new BuildInfo(string.Concat(CONST.moduleAdminPath, @"Views\", uClass_Name, @"\List.cshtml"), Deflate.Compress(sb1.ToString())));
 						clearSb();
 						#endregion
 					} else {
@@ -2222,7 +2222,7 @@ namespace {0}.BLL {{
 	}})();
 </script>", uClass_Name, CodeBuild.UFString(table.PrimaryKeys[0].Name), CodeBuild.UFString(ttfk.Columns[0].Name), "",
 	pkUrlQuerys.Replace("a.", ""), pkHiddens.Replace("a.", ""), str_listTh.Replace("a.", ""), str_listTd.Replace("a.", ""), str_listTh1.Replace("a.", ""), str_listTd1.Replace("a.", ""));
-						loc1.Add(new BuildInfo(string.Concat(CONST.moduleAdminPath, @"Views\Admin\", uClass_Name, @"\List.cshtml"), Deflate.Compress(sb1.ToString())));
+						loc1.Add(new BuildInfo(string.Concat(CONST.moduleAdminPath, @"Views\", uClass_Name, @"\List.cshtml"), Deflate.Compress(sb1.ToString())));
 						clearSb();
 						#endregion
 					}
@@ -2451,7 +2451,7 @@ namespace {0}.BLL {{
 		top.mainViewInit();
 	}})();
 </script>", uClass_Name, sb4.ToString(), sb5.ToString(), str_fk_getlist, str_addjs_mn_initUI, sb14.ToString());
-					loc1.Add(new BuildInfo(string.Concat(CONST.moduleAdminPath, @"Views\Admin\", uClass_Name, @"\Edit.cshtml"), Deflate.Compress(sb1.ToString())));
+					loc1.Add(new BuildInfo(string.Concat(CONST.moduleAdminPath, @"Views\", uClass_Name, @"\Edit.cshtml"), Deflate.Compress(sb1.ToString())));
 					clearSb();
 					#endregion
 				}

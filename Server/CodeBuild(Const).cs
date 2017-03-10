@@ -1564,14 +1564,14 @@ namespace {0}.Module.Admin.Controllers {{
 	<title>{0}后台管理中心 - 登陆</title>
 	<!-- Tell the browser to be responsive to screen width -->
 	<meta content=""width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"" name=""viewport"">
-	<link rel=""stylesheet"" href=""./htm/bootstrap/css/bootstrap.min.css"">
-	<link rel=""stylesheet"" href=""./htm/plugins/font-awesome/css/font-awesome.min.css"" />
-	<link rel=""stylesheet"" href=""./htm/css/system.css"">
-	<script type=""text/javascript"" src=""./htm/js/jQuery-2.1.4.min.js""></script>
-	<script type=""text/javascript"" src=""./htm/js/lib.js""></script>
+	<link rel=""stylesheet"" href=""/module/admin/htm/bootstrap/css/bootstrap.min.css"">
+	<link rel=""stylesheet"" href=""/module/admin/htm/plugins/font-awesome/css/font-awesome.min.css"" />
+	<link rel=""stylesheet"" href=""/module/admin/htm/css/system.css"">
+	<script type=""text/javascript"" src=""/module/admin/htm/js/jQuery-2.1.4.min.js""></script>
+	<script type=""text/javascript"" src=""/module/admin/htm/js/lib.js""></script>
 	<!--[if lt IE 9]>
-	<script type='text/javascript' src='./htm/plugins/html5shiv/html5shiv.min.js'></script>
-	<script type='text/javascript' src='./htm/plugins/respond/respond.min.js'></script>
+	<script type='text/javascript' src='/module/admin/htm/plugins/html5shiv/html5shiv.min.js'></script>
+	<script type='text/javascript' src='/module/admin/htm/plugins/respond/respond.min.js'></script>
 	<![endif]-->
 
 <style type=""text/css"">
@@ -1584,7 +1584,7 @@ namespace {0}.Module.Admin.Controllers {{
 <body class=""hold-transition login-page"">
 	<div class=""login-box"">
 		<div class=""login-logo"">
-			<a href=""./""><b>{0}</b>后台管理中心</a>
+			<a href=""/module/admin/""><b>{0}</b>后台管理中心</a>
 		</div>
 
 		<div id=""error_msg"" style=""display:none;"">
@@ -1628,8 +1628,8 @@ namespace {0}.Module.Admin.Controllers {{
 	<!-- /.login-box -->
 
 	<!-- jQuery 2.2.0 -->
-	<script src=""./htm/plugins/jQuery/jQuery-2.2.0.min.js""></script>
-	<script src=""./htm/bootstrap/js/bootstrap.min.js""></script>
+	<script src=""/module/admin/htm/plugins/jQuery/jQuery-2.2.0.min.js""></script>
+	<script src=""/module/admin/htm/bootstrap/js/bootstrap.min.js""></script>
 
 <script type=""text/javascript"">
 	(function () {{

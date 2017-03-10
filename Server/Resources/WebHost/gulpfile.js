@@ -19,7 +19,7 @@ gulp.task('clean-module', function () {
 
 gulp.task('copy-module', ['clean-module'], function () {
 	modules.forEach(function (module) {
-		//console.log(paths.devModule + module.fullName + '/Views/**/*.*');
+		console.log(paths.devModule + module.fullName + '/Views/**/*.*');
         gulp.src([paths.devModule + module.fullName + '/Views/**/*.*'], { base: module.fullName })
             .pipe(gulp.dest(paths.hostModule + module.fullName));
         gulp.src(paths.devModule + module.fullName + '/bin/Debug/netstandard1.6/**/*.*')
@@ -44,9 +44,9 @@ function loadModules() {
 	var moduleManifestPaths,
         modules = [];
 
-	moduleManifestPaths = glob.sync(paths.devModule + '*/project.json', {});
+	moduleManifestPaths = glob.sync(paths.devModule + '*/*.csproj', {});
 	moduleManifestPaths.forEach(function (moduleManifestPath) {
-		var reg = /\/([^\/]+)\/project\.json/.exec(moduleManifestPath);
+        var reg = /\/([^\/]+)\/\1\.csproj/.exec(moduleManifestPath);
 		var moduleManifest = {
 			name: reg[1],
 			fullName: reg[1],
