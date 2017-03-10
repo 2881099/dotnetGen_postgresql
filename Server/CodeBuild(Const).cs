@@ -1391,6 +1391,11 @@ namespace {0}.WebHost {{
 			app.UseSession();
 			app.UseMvc();
 			app.UseCustomizedStaticFiles(Modules);
+
+			if (env.IsDevelopment())
+				app.UseSwagger().UseSwaggerUi(options => {{
+					options.SwaggerEndpoint(""/swagger/v1/swagger.json"", ""V1 Docs"");
+				}});
 		}}
 	}}
 }}
