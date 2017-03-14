@@ -290,9 +290,6 @@ public static partial class MySql_Data_MySqlClient_ExtensionMethods {
 		DescriptionAttribute desc = item.GetType().GetField(name)?.GetCustomAttribute<DescriptionAttribute>();
 		return desc?.Description ?? name;
 	}
-	public static int ToInt32(this Enum item) {
-		return Convert.ToInt32(item);
-	}
 	public static long ToInt64(this Enum item) {
 		return Convert.ToInt64(item);
 	}

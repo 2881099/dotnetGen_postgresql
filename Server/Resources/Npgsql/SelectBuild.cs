@@ -141,11 +141,12 @@ namespace Npgsql {
 			List<TReturnInfo> ret = this.Limit(1).ToList();
 			return ret.Count > 0 ? ret[0] : default(TReturnInfo);
 		}
-		public override string ToString() {
+		public override string ToString() => this.ToString(null);
+		public string ToString(string field) {
 			if (string.IsNullOrEmpty(_sort) && _skip > 0) this.Sort(_dals[0].Sort);
 			string limit = string.Concat(_limit > 0 ? string.Format(" \r\nlimit {0}", _limit) : string.Empty, _skip > 0 ? string.Format(" \r\noffset {0}", _skip) : string.Empty);
 			string where = string.IsNullOrEmpty(_where) ? string.Empty : string.Concat(" \r\nWHERE ", _where.Substring(5));
-			string sql = string.Concat("SELECT ", _field, _table, _join, where, _sort, limit);
+			string sql = string.Concat("SELECT ", field ?? _field, _table, _join, where, _sort, limit);
 			return sql;
 		}
 		public object[][] Aggregate(string fields) {
