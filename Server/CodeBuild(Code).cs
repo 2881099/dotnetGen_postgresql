@@ -515,7 +515,6 @@ using System.Net.NetworkInformation;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NpgsqlTypes;
-using {0}.BLL;
 
 namespace {0}.Model {{
 	[JsonObject(MemberSerialization.OptIn)]
@@ -588,7 +587,7 @@ namespace {0}.Model {{
 							tmpinfo += string.Format(
 @"		public {0}Info Obj_{1} {{
 			get {{
-				if (_obj_{1} == null{6}) _obj_{1} = {5}.GetItem{3}({4});
+				if (_obj_{1} == null{6}) _obj_{1} = BLL.{5}.GetItem{3}({4});
 				return _obj_{1};
 			}}
 			internal set {{ _obj_{1} = value; }}
@@ -774,8 +773,13 @@ namespace {0}.Model {{
 					string updateDiySet = "";
 					string add_or_flag = "Add";
 					int ms = 0;
+					//若中间表，两外键指向相同表，则选择 表名_主键名 此字段作为主参考字段
+					string main_column = UFString(table.Name + "_" + table.PrimaryKeys[0].Name);
+					if (t2.Columns.Find(delegate (ColumnInfo tcol) {
+						return string.Compare(main_column, tcol.Name, true) == 0;
+					}) == null) main_column = fk.Columns[0].Name;
 					foreach (ColumnInfo columnInfo in t2.Columns) {
-						if (columnInfo.Name == fk.Columns[0].Name) {
+						if (string.Compare(columnInfo.Name, main_column, true) == 0) {
 							parmsNoneType2 += string.Format("\r\n			{0} = this.{1}, ", CodeBuild.UFString(columnInfo.Name), CodeBuild.UFString(table.PrimaryKeys[0].Name));
 							parmsNoneType4 += string.Format(GetCSTypeValue(columnInfo.Type), "this." + CodeBuild.UFString(table.PrimaryKeys[0].Name)) + ", ";
 							parmsNoneType5 += string.Format("\r\n			item.{0} = this.{1};", CodeBuild.UFString(columnInfo.Name), CodeBuild.UFString(table.PrimaryKeys[0].Name));
@@ -809,11 +813,13 @@ namespace {0}.Model {{
 							fkk3_ReferencedTable_ObjName = CodeBuild.UFString(fkk3_ReferencedTable_ObjName);
 							parms1 += CodeBuild.UFString(fkk3.ReferencedTable.ClassName) + "Info " + fkk3_ReferencedTable_ObjName + ", ";
 							parmsNoneType1 += fkk3_ReferencedTable_ObjName + "." + CodeBuild.UFString(fkk3.ReferencedColumns[0].Name) + ", ";
-							parms3 += CodeBuild.UFString(fkk3.ReferencedTable.ClassName) + "Info " + fkk3_ReferencedTable_ObjName + ", ";
-							parmsNoneType3 += fkk3_ReferencedTable_ObjName + "." + CodeBuild.UFString(fkk3.ReferencedColumns[0].Name) + ", ";
 
-							parms4 += columnInfo.CsType + " " + CodeBuild.UFString(columnInfo.Name) + ", ";
-							parmsNoneType4 += string.Format(GetCSTypeValue(columnInfo.Type), CodeBuild.UFString(columnInfo.Name)) + ", ";
+							if (columnInfo.IsPrimaryKey) {
+								parms3 += CodeBuild.UFString(fkk3.ReferencedTable.ClassName) + "Info " + fkk3_ReferencedTable_ObjName + ", ";
+								parmsNoneType3 += fkk3_ReferencedTable_ObjName + "." + CodeBuild.UFString(fkk3.ReferencedColumns[0].Name) + ", ";
+								parms4 += columnInfo.CsType + " " + CodeBuild.UFString(columnInfo.Name) + ", ";
+								parmsNoneType4 += string.Format(GetCSTypeValue(columnInfo.Type), CodeBuild.UFString(columnInfo.Name)) + ", ";
+							}
 							//CodeBuild.UFString(columnInfo.Name) + " ?? default(" + columnInfo.CsType.Replace("?", "") + "), ";
 							if (add_or_flag != "Flag" && fk.Columns[0].IsPrimaryKey) //中间表关系键，必须为主键
 								t2.Uniques.ForEach(delegate (List<ColumnInfo> cs) {
@@ -846,21 +852,23 @@ namespace {0}.Model {{
 		public {0}Info Flag{1}({2}) => Flag{1}({3});", CodeBuild.UFString(t2.ClassName), CodeBuild.UFString(addname), parms1, parmsNoneType1);
 						sb6.AppendFormat(@"
 		public {0}Info Flag{1}({2}) {{
-			{0}Info item = {0}.GetItem({5});
-			if (item == null) item = {0}.Insert(new {0}Info {{{3}}});{6}
+			{0}Info item = BLL.{0}.GetItem({5});
+			if (item == null) item = BLL.{0}.Insert(new {0}Info {{{3}}});{6}
 			return item;
 		}}
 ", CodeBuild.UFString(t2.ClassName), CodeBuild.UFString(addname), parms2, parmsNoneType2, solutionName, pkNamesNoneType, updateDiySet.Length > 0 ? "\r\n\t\t\telse item.UpdateDiy" + updateDiySet + ".ExecuteNonQuery();" : string.Empty);
 					} else {
+						string addname_schema = addname == t2.Name && t2.Owner != table.Owner ? t2.ClassName : addname;
+						//sb6.Append(addname + "," + t2.Name);
 						if (parms1 != parms2)
 							sb6.AppendFormat(@"
-		public {0}Info Add{1}({2}) => Add{1}({3});", CodeBuild.UFString(t2.ClassName), CodeBuild.UFString(addname), parms1, parmsNoneType1);
+		public {0}Info Add{1}({2}) => Add{1}({3});", CodeBuild.UFString(t2.ClassName), CodeBuild.UFString(addname_schema), parms1, parmsNoneType1);
 						sb6.AppendFormat(@"
-		public {0}Info Add{1}({2}) => {0}.Insert(new {0}Info {{{3}}});
+		public {0}Info Add{1}({2}) => BLL.{0}.Insert(new {0}Info {{{3}}});
 		public {0}Info Add{1}({0}Info item) {{{5}
 			return item.Save();
 		}}
-", CodeBuild.UFString(t2.ClassName), CodeBuild.UFString(addname), parms2, parmsNoneType2, solutionName, parmsNoneType5);
+", CodeBuild.UFString(t2.ClassName), CodeBuild.UFString(addname_schema), parms2, parmsNoneType2, solutionName, parmsNoneType5);
 					}
 
 					if (add_or_flag == "Flag") {
@@ -874,8 +882,8 @@ namespace {0}.Model {{
 							}
 						sb6.AppendFormat(@"
 		public int Unflag{1}({2}) => Unflag{1}({3});
-		public int Unflag{1}({4}) => {0}.Delete{9}({5});
-		public int Unflag{1}ALL() => {0}.DeleteBy{8}(this.{7});
+		public int Unflag{1}({4}) => BLL.{0}.Delete{9}({5});
+		public int Unflag{1}ALL() => BLL.{0}.DeleteBy{8}(this.{7});
 ", CodeBuild.UFString(t2.ClassName), CodeBuild.UFString(addname), parms3, parmsNoneType3, parms4, parmsNoneType4,
 	solutionName, string.Format(GetCSTypeValue(table.PrimaryKeys[0].Type), CodeBuild.UFString(table.PrimaryKeys[0].Name)),
 							CodeBuild.UFString(fk.Columns[0].Name), deleteByUniqui);
@@ -897,7 +905,7 @@ namespace {0}.Model {{
 							//}
 							string objs_value = string.Format(@"
 		private List<{0}Info> _obj_{1}s;
-		public List<{0}Info> Obj_{1}s => _obj_{1}s ?? (_obj_{1}s = {0}.SelectBy{5}_{4}({3}).ToList());", CodeBuild.UFString(fk2[0].ReferencedTable.ClassName), CodeBuild.LFString(addname), solutionName, civ, table.PrimaryKeys[0].Name, CodeBuild.UFString(f5));
+		public List<{0}Info> Obj_{1}s => _obj_{1}s ?? (_obj_{1}s = BLL.{0}.SelectBy{5}_{4}({3}).ToList());", CodeBuild.UFString(fk2[0].ReferencedTable.ClassName), CodeBuild.LFString(addname), solutionName, civ, table.PrimaryKeys[0].Name, CodeBuild.UFString(f5));
 							//如果中间表字段 > 2，那么应该把其中间表也查询出来
 							if (t2.Columns.Count > 2) {
 								string _f6 = fk.Columns[0].Name;
@@ -918,7 +926,7 @@ namespace {0}.Model {{
 		/// <summary>
 		/// 遍历时，可通过 Obj_{3} 可获取中间表数据
 		/// </summary>
-		public List<{0}Info> Obj_{1}s => _obj_{1}s ?? (_obj_{1}s = {0}.Select.InnerJoin<{2}>(""b"", @""b.""""{6}"""" = a.""""{5}"""""").Where(@""b.""""{4}"""" = {{0}}"", {7}).ToList());", CodeBuild.UFString(fk2[0].ReferencedTable.ClassName), CodeBuild.LFString(addname), CodeBuild.UFString(t2.ClassName), CodeBuild.LFString(t2.ClassName),
+		public List<{0}Info> Obj_{1}s => _obj_{1}s ?? (_obj_{1}s = BLL.{0}.Select.InnerJoin<BLL.{2}>(""b"", @""b.""""{6}"""" = a.""""{5}"""""").Where(@""b.""""{4}"""" = {{0}}"", {7}).ToList());", CodeBuild.UFString(fk2[0].ReferencedTable.ClassName), CodeBuild.LFString(addname), CodeBuild.UFString(t2.ClassName), CodeBuild.LFString(t2.ClassName),
 			_f6, _f7, _f8, civ);
 							}
 							string objs_key = string.Format("Obj_{0}s", CodeBuild.LFString(addname));
@@ -931,7 +939,7 @@ namespace {0}.Model {{
 						string f2 = fk.Columns[0].Name.CompareTo("parent_id") == 0 ? t2name : fk.Columns[0].Name.Replace(tablename + "_" + table.PrimaryKeys[0].Name, "") + CodeBuild.LFString(t2name);
 						string objs_value = string.Format(@"
 		private List<{0}Info> _obj_{1}s;
-		public List<{0}Info> Obj_{1}s => _obj_{1}s ?? (_obj_{1}s = {0}.SelectBy{3}(_{4}).Limit(500).ToList());", CodeBuild.UFString(t2.ClassName), f2, solutionName, CodeBuild.UFString(fk.Columns[0].Name), CodeBuild.UFString(table.PrimaryKeys[0].Name));
+		public List<{0}Info> Obj_{1}s => _obj_{1}s ?? (_obj_{1}s = BLL.{0}.SelectBy{3}(_{4}).Limit(500).ToList());", CodeBuild.UFString(t2.ClassName), f2, solutionName, CodeBuild.UFString(fk.Columns[0].Name), CodeBuild.UFString(table.PrimaryKeys[0].Name));
 						string objs_key = string.Format("Obj_{0}s", f2);
 						if (!dic_objs.ContainsKey(objs_key))
 							dic_objs.Add(objs_key, objs_value);
@@ -952,16 +960,16 @@ namespace {0}.Model {{
 						sb6.Insert(0, string.Format(@"
 		public {1}Info Save() {{{2}
 			if (this.{4} != null) {{
-				{1}.Update(this);
+				BLL.{1}.Update(this);
 				return this;
 			}}{3}
-			return {1}.Insert(this);
+			return BLL.{1}.Insert(this);
 		}}", solutionName, uClass_Name, colUpdateTime != null ? @"
 			this." + UFString(colUpdateTime.Name) + " = DateTime.Now;" : "", colCreateTime != null ? @"
 			this." + UFString(colCreateTime.Name) + " = DateTime.Now;" : "", pkCsParamNoType.Replace(", ", " != null && this.")));
 					}
 					sb6.Insert(0, string.Format(@"
-		public {0}.DAL.{1}.SqlUpdateBuild UpdateDiy => {1}.UpdateDiy(this, _{2});", solutionName, uClass_Name, pkCsParamNoTypeByval.Replace(", ", ", _")));
+		public {0}.DAL.{1}.SqlUpdateBuild UpdateDiy => BLL.{1}.UpdateDiy(this, _{2});", solutionName, uClass_Name, pkCsParamNoTypeByval.Replace(", ", ", _")));
 				}
 
 				sb1.AppendFormat(
@@ -1626,7 +1634,7 @@ namespace {0}.BLL {{
 						return;
 					}
 
-					if (csType == "bool?") {
+					if (csType == "bool?" || csType == "Guid?") {
 						sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}(params {2}[] {1}) {{
 			return this.Where1Or(@""a.""""{3}"""" = {{0}}"", {1});
