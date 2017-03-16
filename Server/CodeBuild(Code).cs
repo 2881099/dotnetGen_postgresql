@@ -1638,7 +1638,7 @@ namespace {0}.BLL {{
 						sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}(params {2}[] {1}) {{
 			return this.Where1Or(@""a.""""{3}"""" = {{0}}"", {1});
-		}}", uClass_Name, fkcsBy, csType, col.Name);
+		}}", uClass_Name, fkcsBy, col.IsPrimaryKey ? csType.Replace("?", "") : csType, col.Name);
 						return;
 					}
 					if (col.Type == NpgsqlDbType.Smallint || col.Type == NpgsqlDbType.Integer || col.Type == NpgsqlDbType.Bigint ||
