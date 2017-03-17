@@ -1240,7 +1240,12 @@ namespace {0}.DAL {{
 				_setQs.Enqueue(ni => _item.{0} = ni.{0});
 				return this.Set(@""""""{1}"""""", $@""""""{1}"""" || @{1}_{{_parameters.Count}}"", 
 					{3}value }});
-			}}", CodeBuild.UFString(col.Name), col.Name, col.CsType, valueParm2);
+			}}
+			public SqlUpdateBuild Set{0}Remove({4} value) {{
+				_setQs.Enqueue(ni => _item.{0} = ni.{0});
+				return this.Set(@""""""{1}"""""", $@""array_remove(""""{1}"""", @{1}_{{_parameters.Count}})"", 
+					{5}value }});
+			}}", CodeBuild.UFString(col.Name), col.Name, col.CsType, valueParm2, arrType, valueParm2.Replace("NpgsqlDbType.Array | ", ""));
 						}
 						sb5.AppendFormat(@"
 			public SqlUpdateBuild Set{0}({2} value{4}) {{
