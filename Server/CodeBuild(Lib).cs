@@ -163,7 +163,7 @@ namespace Server {
 				case NpgsqlDbType.MacAddr: return string.Format(arr, "PhysicalAddress");
 
 				case NpgsqlDbType.Json:
-				case NpgsqlDbType.Jsonb: return string.Format(arr, "JObject");
+				case NpgsqlDbType.Jsonb: return string.Format(arr, "JToken");
 				case NpgsqlDbType.Uuid: return string.Format(arr, "Guid" + (attndims > 0 ? "" : "?"));
 
 				case NpgsqlDbType.IntegerRange: return string.Format(arr, "NpgsqlRange<int>" + (attndims > 0 ? "" : "?"));
@@ -220,7 +220,7 @@ namespace Server {
 				case NpgsqlDbType.MacAddr: return "dr.GetFieldValue<PhysicalAddress>(index)";
 
 				case NpgsqlDbType.Json:
-				case NpgsqlDbType.Jsonb: return "JObject.Parse(dr.GetString(index))";
+				case NpgsqlDbType.Jsonb: return "JToken.Parse(dr.GetString(index))";
 				case NpgsqlDbType.Uuid: return "dr.GetGuid(index)";
 
 				case NpgsqlDbType.IntegerRange: return "dr.GetFieldValue<NpgsqlRange<int>>(index)";
@@ -277,7 +277,7 @@ namespace Server {
 				case NpgsqlDbType.MacAddr: return "{0} as PhysicalAddress";
 
 				case NpgsqlDbType.Json:
-				case NpgsqlDbType.Jsonb: return "{0} as JObject";
+				case NpgsqlDbType.Jsonb: return "{0} as JToken";
 				case NpgsqlDbType.Uuid: return "(Guid){0}";
 
 				case NpgsqlDbType.IntegerRange: return "(NpgsqlRange<int>){0}";
@@ -448,7 +448,7 @@ namespace Server {
 				case NpgsqlDbType.MacAddr: return "PhysicalAddress.Parse({0})";
 
 				case NpgsqlDbType.Json:
-				case NpgsqlDbType.Jsonb: return "JObject.Parse({0})";
+				case NpgsqlDbType.Jsonb: return "JToken.Parse({0})";
 				case NpgsqlDbType.Uuid: return "Guid.Parse({0})";
 
 				case NpgsqlDbType.IntegerRange: return "PSqlHelper.ParseNpgsqlRange<int>({0})";
