@@ -68,6 +68,12 @@ namespace Npgsql {
 		public new TLinket Limit(int limit) {
 			return base.Limit(limit) as TLinket;
 		}
+		public new TLinket Take(int limit) {
+			return this.Limit(limit) as TLinket;
+		}
+		public new TLinket Page(int pageIndex, int pageSize) {
+			return this.Page(pageIndex, pageSize) as TLinket;
+		}
 		public SelectBuild(IDAL dal, Executer exec) : base(dal, exec) { }
 	}
 	public class SelectBuild<TReturnInfo> {
@@ -285,6 +291,12 @@ namespace Npgsql {
 		public SelectBuild<TReturnInfo> Limit(int limit) {
 			_limit = limit;
 			return this;
+		}
+		public SelectBuild<TReturnInfo> Take(int limit) {
+			return this.Limit(limit);
+		}
+		public SelectBuild<TReturnInfo> Page(int pageIndex, int pageSize) {
+			return this.Skip(Math.Max(0, pageIndex - 1) * pageSize).Limit(pageSize);
 		}
 	}
 }
