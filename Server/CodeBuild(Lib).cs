@@ -519,7 +519,7 @@ namespace Server {
 				case NpgsqlDbType.DateRange: type += " | NpgsqlDbType.Range | NpgsqlDbType.Date"; break;
 
 				case NpgsqlDbType.Enum:
-				case NpgsqlDbType.Composite: type += " | NpgsqlDbType." + col.Type.ToString(); type2 = "SpecificType = typeof(" + col.CsType.Replace("?", "") + "), "; break;
+				case NpgsqlDbType.Composite: type += " | NpgsqlDbType." + col.Type.ToString(); type2 = "SpecificType = typeof(" + Regex.Replace(col.CsType.Replace("?", ""), @"\[\,*\]", "") + "), "; break;
 				default: type += " | NpgsqlDbType." + col.Type.ToString(); break;
 			}
 			string returnValue = place + string.Format("new NpgsqlParameter(\"{0}\", {1}, {2}) {{ {4}Value = {3} }}, \r\n",
