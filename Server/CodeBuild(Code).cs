@@ -799,6 +799,7 @@ namespace {0}.Model {{
 						}
 						if (columnInfo.IsPrimaryKey) pkNamesNoneType += string.Format(GetCSTypeValue(columnInfo.Type), CodeBuild.UFString(columnInfo.Name)) + ", ";
 						//CodeBuild.UFString(columnInfo.Name) + ", ";
+						else if (columnInfo.Name.ToLower() == "create_time" && columnInfo.CsType == "DateTime?") ;
 						else updateDiySet += string.Format("\r\n\t\t\t\t\t.Set{0}({0})", CodeBuild.UFString(columnInfo.Name));
 
 						if (columnInfo.IsIdentity) {
@@ -884,7 +885,7 @@ namespace {0}.Model {{
 			if (item == null) item = BLL.{0}.Insert(new {0}Info {{{3}}});{6}
 			return item;
 		}}
-", CodeBuild.UFString(t2.ClassName), CodeBuild.UFString(addname_schema), parms2, parmsNoneType2, solutionName, pkNamesNoneType, updateDiySet.Length > 0 ? "\r\n\t\t\telse item.UpdateDiy" + updateDiySet + ".ExecuteNonQuery();" : string.Empty);
+", CodeBuild.UFString(t2.ClassName), CodeBuild.UFString(addname_schema), parms2, parmsNoneType2.Replace("\t\t\t", "\t\t\t\t"), solutionName, pkNamesNoneType, updateDiySet.Length > 0 ? "\r\n\t\t\telse item.UpdateDiy" + updateDiySet + ".ExecuteNonQuery();" : string.Empty);
 					} else {
 						//sb6.Append(addname + "," + t2.Name);
 						if (parms1_add != parms2_add)
