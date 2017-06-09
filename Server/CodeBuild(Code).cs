@@ -1279,7 +1279,7 @@ namespace {0}.DAL {{
 								sb5.AppendFormat(@"
 			public SqlUpdateBuild Set{0}Increment({2} value{4}) {{
 				_setQs.Enqueue(ni => _item.{0} = ni.{0});
-				return this.Set({7}@""""""{1}""""{5}"", $@""""""{1}""""{6} + @{1}_{{_parameters.Count}}"", 
+				return this.Set({7}@""""""{1}""""{5}"", $@""COALESCE(""""{1}""""{6}, 0) + @{1}_{{_parameters.Count}}"", 
 					{3}value }});
 			}}", CodeBuild.UFString(col.Name), col.Name, fptype, valueParm2.Replace("NpgsqlDbType.Array | ", ""),
 					arrParm, arrUndeSql, arrUndeSql, string.IsNullOrEmpty(arrUndeSql) ? "" : "$", col.Attndims > 0 ? " ," + arrUnde.Trim('[', ']') : "");
