@@ -676,7 +676,7 @@ namespace {0}.Model {{
 @"		private {0} __{1};
 		{2}{3}[JsonProperty] public {0} {1} {{
 			get {{ return __{1} ?? (__{1} = string.IsNullOrEmpty(_{1}) ? null : JToken.Parse(_{1})); }}
-			set {{ __{1} = value.Type == JTokenType.Null ? null : value; _{1} = value?.ToString(); }}
+			set {{ __{1} = value?.Type == JTokenType.Null ? null : value; _{1} = value?.ToString(); }}
 		}}
 ", csType, uColumn_Name, prototype_comment, JsonConverter);
 					} else {
