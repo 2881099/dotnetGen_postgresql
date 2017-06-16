@@ -220,7 +220,7 @@ namespace Server {
 				case NpgsqlDbType.MacAddr: return "dr.GetFieldValue<PhysicalAddress>(index)";
 
 				case NpgsqlDbType.Json:
-				case NpgsqlDbType.Jsonb: return "JToken.Parse(dr.GetString(index))";
+				case NpgsqlDbType.Jsonb: return "dr.GetString(index)";
 				case NpgsqlDbType.Uuid: return "dr.GetGuid(index)";
 
 				case NpgsqlDbType.IntegerRange: return "dr.GetFieldValue<NpgsqlRange<int>>(index)";

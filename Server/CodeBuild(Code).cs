@@ -536,8 +536,8 @@ namespace {0}.Model {{
 		", comment);
 
 					sb1.AppendFormat(
-	@"		private {0} _{1};
-", csType, uColumn_Name);
+	@"		{0} {1} _{2};
+", csType == "JToken" ? "internal" : "private", csType == "JToken" ? "string" : csType, uColumn_Name);
 
 					string tmpinfo = string.Empty;
 					List<string> tsvarr = new List<string>();
@@ -671,6 +671,14 @@ namespace {0}.Model {{
 ", uColumn_Name);
 						sb2.Append(tmpsetvalue);
 						sb2.Append(tmpinfo);
+					} else if (csType == "JToken") {
+						sb2.AppendFormat(
+@"		private {0} __{1};
+		{2}{3}[JsonProperty] public {0} {1} {{
+			get {{ return __{1} ?? (__{1} = string.IsNullOrEmpty(_{1}) ? null : JToken.Parse(_{1})); }}
+			set {{ __{1} = value.Type == JTokenType.Null ? null : value; _{1} = value?.ToString(); }}
+		}}
+", csType, uColumn_Name, prototype_comment, JsonConverter);
 					} else {
 						sb2.AppendFormat(
 @"		{2}{3}[JsonProperty] public {0} {1} {{
@@ -692,7 +700,9 @@ namespace {0}.Model {{
 						csType.Contains("IPAddress") ||
 						csType.Contains("PhysicalAddress") ? column.Attndims > 0 ?
 							string.Format("NpgsqlTypesConverter.GetJObject({0}, new int[{1}], 0)", "_" + uColumn_Name, column.Attndims) :
-							"_" + uColumn_Name + "?.ToString()" : ("_" + uColumn_Name));
+							"_" + uColumn_Name + "?.ToString()" : (
+								csType == "JToken" ? ("this." + uColumn_Name) : ("_" + uColumn_Name)
+						));
 					sb7.AppendFormat(@"
 				{0}, ""|"",", GetToStringStringify(column));
 					//		sb8.AppendFormat(@"
@@ -1149,7 +1159,7 @@ namespace {0}.DAL {{
 
 				foreach (ColumnInfo columnInfo in table.Columns)
 					sb1.AppendFormat(@"
-			if (!dr.IsDBNull(++index)) item.{0} = {1};", CodeBuild.UFString(columnInfo.Name), CodeBuild.GetDataReaderMethod(columnInfo.Type, columnInfo.CsType));
+			if (!dr.IsDBNull(++index)) item.{0} = {1};", (columnInfo.CsType == "JToken" ? "_" : "") + CodeBuild.UFString(columnInfo.Name), CodeBuild.GetDataReaderMethod(columnInfo.Type, columnInfo.CsType));
 
 				sb1.AppendFormat(@"
 			return item;
