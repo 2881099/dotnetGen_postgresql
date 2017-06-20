@@ -333,7 +333,7 @@ using Npgsql;
 namespace {0}.BLL {{
 
 	public partial class RedisHelper : CSRedis.QuickHelperBase {{
-		public static IConfigurationRoot Configuration {{ get; internal set; }};
+		public static IConfigurationRoot Configuration {{ get; internal set; }}
 		public static void InitializeConfiguration(IConfigurationRoot cfg) {{
 			Configuration = cfg;
 			int port, poolsize, database;
