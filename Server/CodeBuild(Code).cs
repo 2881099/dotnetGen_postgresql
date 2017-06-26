@@ -1724,6 +1724,11 @@ namespace {0}.BLL {{
 					}
 					if (col.Type == NpgsqlDbType.Timestamp || col.Type == NpgsqlDbType.TimestampTZ || col.Type == NpgsqlDbType.Date ||
 						col.Type == NpgsqlDbType.Time || col.Type == NpgsqlDbType.TimeTZ || col.Type == NpgsqlDbType.Interval) {
+						if (col.IsPrimaryKey)
+							sb6.AppendFormat(@"
+		public {0}SelectBuild Where{1}({2} {1}) {{
+			return base.Where(@""a.""""{3}"""" = {{0}}"", {1}) as {0}SelectBuild;
+		}}", uClass_Name, fkcsBy, csType, col.Name);
 						sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}Range({2} begin) {{
 			return base.Where(@""a.""""{3}"""" >= {{0}}"", begin) as {0}SelectBuild;
