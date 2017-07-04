@@ -1671,7 +1671,7 @@ namespace {0}.BLL {{
 						if (col.Type == NpgsqlDbType.Enum) {
 							sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}Any_IN(params {3}[] {1}s) {{
-			return this.Where1Or(@""{{0}} = ANY(a.""""{4}"""")"", {1}s);
+			return this.Where1Or(@""a.""""{4}"""" @> ARRAY[{{0}}::{5}]"", {1}s);
 		}}
 		public {0}SelectBuild Where{1}Any({2} {1}1) {{
 			return this.Where{1}Any_IN({1}1);
@@ -1689,13 +1689,13 @@ namespace {0}.BLL {{
 		public {0}SelectBuild Where{1}Any({2} {1}1, {2} {1}2, {2} {1}3, {2} {1}4, {2} {1}5) {{
 			return this.Where{1}Any_IN({1}1, {1}2, {1}3, {1}4, {1}5);
 		}}
-		#endregion", uClass_Name, fkcsBy, csType.Replace("?", ""), csType, col.Name);
+		#endregion", uClass_Name, fkcsBy, csType.Replace("?", ""), csType, col.Name, col.SqlType);
 							return;
 						}
 						sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}Any(params {2}[] {1}) {{
-			return this.Where1Or(@""{{0}} = ANY(a.""""{3}"""")"", {1});
-		}}", uClass_Name, fkcsBy, csType.Replace("?", ""), col.Name);
+			return this.Where1Or(@""a.""""{3}"""" @> array[{{0}}::{4}]"", {1});
+		}}", uClass_Name, fkcsBy, csType.Replace("?", ""), col.Name, col.SqlType);
 						return;
 					}
 
