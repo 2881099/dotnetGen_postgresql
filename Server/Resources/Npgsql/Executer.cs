@@ -21,12 +21,16 @@ namespace Npgsql {
 			this.Pool = new ConnectionPool(connectionString);
 		}
 
-		void LoggerException(NpgsqlCommand cmd, Exception e) {
+		void LoggerException(NpgsqlCommand cmd, Exception e, DateTime dt, string logtxt) {
+			TimeSpan ts = DateTime.Now.Subtract(dt);
+			if (e == null && ts.TotalMilliseconds > 100)
+				Log.LogWarning($"执行SQL语句耗时过长{ts.TotalMilliseconds}ms\r\n{cmd.CommandText}\r\n{logtxt}");
+
 			if (e == null) return;
 			string log = $"数据库出错（执行SQL）〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓\r\n{cmd.CommandText}\r\n";
-			foreach (NpgsqlParameter parm in cmd.Parameters) {
+			foreach (NpgsqlParameter parm in cmd.Parameters)
 				log += Lib.PadRight(parm.ParameterName, 20) + " = " + Lib.PadRight(parm.Value == null ? "NULL" : parm.Value, 20) + "\r\n";
-			}
+
 			log += e.Message;
 			Log.LogError(log);
 
@@ -64,22 +68,48 @@ namespace Npgsql {
 			try { string ret = string.Format(filter, nparms); return ret; } catch { return filter; }
 		}
 		public void ExecuteReader(Action<NpgsqlDataReader> readerHander, CommandType cmdType, string cmdText, params NpgsqlParameter[] cmdParms) {
+			DateTime dt = DateTime.Now;
 			NpgsqlCommand cmd = new NpgsqlCommand();
-			var pc = PrepareCommand(cmd, cmdType, cmdText, cmdParms);
+			string logtxt = "";
+			DateTime logtxt_dt = DateTime.Now;
+			var pc = PrepareCommand(cmd, cmdType, cmdText, cmdParms, ref logtxt);
+			logtxt += $"PrepareCommand: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms\r\n";
 			Exception ex = Lib.Trys(delegate () {
+				logtxt_dt = DateTime.Now;
 				if (cmd.Connection.State == ConnectionState.Closed) cmd.Connection.Open();
+				logtxt += $"Open: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms\r\n";
 				try {
-					using (NpgsqlDataReader dr = cmd.ExecuteReader()) {
-						while (dr.Read())
-							if (readerHander != null) readerHander(dr);
+					logtxt_dt = DateTime.Now;
+					NpgsqlDataReader dr = cmd.ExecuteReader();
+					logtxt += $"ExecuteReader: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms\r\n";
+					while (true) {
+						logtxt_dt = DateTime.Now;
+						bool isread = dr.Read();
+						logtxt += $"	dr.Read: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms\r\n";
+						if (isread == false) break;
+
+						if (readerHander != null) {
+							logtxt_dt = DateTime.Now;
+							object[] values = new object[dr.FieldCount];
+							dr.GetValues(values);
+							logtxt += $"	dr.GetValues: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms\r\n";
+							logtxt_dt = DateTime.Now;
+							readerHander(dr);
+							logtxt += $"	readerHander: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms ({string.Join(",", values)})\r\n";
+						}
 					}
+					logtxt_dt = DateTime.Now;
+					dr.Dispose();
+					logtxt += $"ExecuteReader_dispose: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms\r\n";
 				} catch {
 					throw;
 				}
 			}, 1);
 
+			logtxt_dt = DateTime.Now;
 			if (pc.Tran == null) this.Pool.ReleaseConnection(pc.Conn);
-			LoggerException(cmd, ex);
+			logtxt += $"ReleaseConnection: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms ";
+			LoggerException(cmd, ex, dt, logtxt);
 		}
 		public object[][] ExeucteArray(CommandType cmdType, string cmdText, params NpgsqlParameter[] cmdParms) {
 			List<object[]> ret = new List<object[]>();
@@ -91,8 +121,10 @@ namespace Npgsql {
 			return ret.ToArray();
 		}
 		public int ExecuteNonQuery(CommandType cmdType, string cmdText, params NpgsqlParameter[] cmdParms) {
+			DateTime dt = DateTime.Now;
 			NpgsqlCommand cmd = new NpgsqlCommand();
-			var pc = PrepareCommand(cmd, cmdType, cmdText, cmdParms);
+			string logtxt = "";
+			var pc = PrepareCommand(cmd, cmdType, cmdText, cmdParms, ref logtxt);
 			int val = 0;
 			Exception ex = Lib.Trys(delegate () {
 				if (cmd.Connection.State == ConnectionState.Closed) cmd.Connection.Open();
@@ -104,13 +136,15 @@ namespace Npgsql {
 			}, 1);
 
 			if (pc.Tran == null) this.Pool.ReleaseConnection(pc.Conn);
-			LoggerException(cmd, ex);
+			LoggerException(cmd, ex, dt, "");
 			cmd.Parameters.Clear();
 			return val;
 		}
 		public object ExecuteScalar(CommandType cmdType, string cmdText, params NpgsqlParameter[] cmdParms) {
+			DateTime dt = DateTime.Now;
 			NpgsqlCommand cmd = new NpgsqlCommand();
-			var pc = PrepareCommand(cmd, cmdType, cmdText, cmdParms);
+			string logtxt = "";
+			var pc = PrepareCommand(cmd, cmdType, cmdText, cmdParms, ref logtxt);
 			object val = null;
 			Exception ex = Lib.Trys(delegate () {
 				if (cmd.Connection.State == ConnectionState.Closed) cmd.Connection.Open();
@@ -122,12 +156,13 @@ namespace Npgsql {
 			}, 1);
 
 			if (pc.Tran == null) this.Pool.ReleaseConnection(pc.Conn);
-			LoggerException(cmd, ex);
+			LoggerException(cmd, ex, dt, "");
 			cmd.Parameters.Clear();
 			return val;
 		}
 
-		private PrepareCommandReturnInfo PrepareCommand(NpgsqlCommand cmd, CommandType cmdType, string cmdText, NpgsqlParameter[] cmdParms) {
+		private PrepareCommandReturnInfo PrepareCommand(NpgsqlCommand cmd, CommandType cmdType, string cmdText, NpgsqlParameter[] cmdParms, ref string logtxt) {
+			DateTime dt = DateTime.Now;
 			cmd.CommandType = cmdType;
 			cmd.CommandText = cmdText;
 
@@ -141,15 +176,24 @@ namespace Npgsql {
 
 			Connection2 conn = null;
 			NpgsqlTransaction tran = CurrentThreadTransaction;
+			logtxt += $"	PrepareCommand_part1: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms cmdParms: {cmdParms.Length}\r\n";
+
 			if (tran == null) {
+				dt = DateTime.Now;
 				conn = this.Pool.GetConnection();
 				cmd.Connection = conn.SqlConnection;
+				logtxt += $"	PrepareCommand_tran==null: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
 			} else {
+				dt = DateTime.Now;
 				cmd.Connection = tran.Connection;
 				cmd.Transaction = tran;
+				logtxt += $"	PrepareCommand_tran!=null: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
 			}
 
+			dt = DateTime.Now;
 			AutoCommitTransaction();
+			logtxt += $"	AutoCommitTransaction: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
+
 			return new PrepareCommandReturnInfo { Conn = conn, Tran = tran };
 		}
 

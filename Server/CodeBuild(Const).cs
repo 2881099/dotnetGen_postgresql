@@ -1261,6 +1261,9 @@ namespace Swashbuckle.AspNetCore.Swagger {{
 		<target xsi:type=""File"" name=""ownFile-web"" fileName=""../nlog/own-${{shortdate}}.log""
 			layout=""${{longdate}}|${{logger}}|${{uppercase:${{level}}}}|  ${{message}} ${{exception}}|${{aspnet-Request-Url}}"" />
 
+		<target xsi:type=""File"" name=""SQLExecuter"" fileName=""../nlog/SQLExecuter-${{shortdate}}.log""
+			layout=""${{longdate}} ${{message}} ${{exception}}|${{aspnet-Request-Url}} ${{document-uri}} "" />
+
 		<target xsi:type=""Null"" name=""blackhole"" />
 	</targets>
 
@@ -1268,6 +1271,7 @@ namespace Swashbuckle.AspNetCore.Swagger {{
 		<logger name=""*"" minlevel=""Error"" writeTo=""allfile"" />
 		<logger name=""Microsoft.*"" minlevel=""Error"" writeTo=""blackhole"" final=""true"" />
 		<logger name=""*"" minlevel=""Error"" writeTo=""ownFile-web"" />
+		<logger name=""{0}_DAL_psqlhelper"" minlevel=""Warn"" writeTo=""SQLExecuter"" />
 	</rules>
 </nlog>
 ";
