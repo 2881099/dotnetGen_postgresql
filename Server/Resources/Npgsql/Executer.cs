@@ -55,10 +55,10 @@ namespace Npgsql {
 						nparms[a] = parms[a];
 					else if (parms[a] is DateTime) {
 						DateTime dt = (DateTime)parms[a];
-						nparms[a] = string.Concat("'", dt.ToString("yyyy-MM-dd HH:mm:ss"), "'");
+						nparms[a] = string.Concat("'", dt.ToString("yyyy-MM-dd HH:mm:ss.ffffff"), "'");
 					} else if (parms[a] is DateTime?) {
 						DateTime? dt = parms[a] as DateTime?;
-						nparms[a] = string.Concat("'", dt.Value.ToString("yyyy-MM-dd HH:mm:ss"), "'");
+						nparms[a] = string.Concat("'", dt.Value.ToString("yyyy-MM-dd HH:mm:ss.ffffff"), "'");
 					} else {
 						nparms[a] = string.Concat("'", parms[a].ToString().Replace("'", "''"), "'");
 						//if (parms[a] is string) nparms[a] = string.Concat('N', nparms[a]);
@@ -73,34 +73,34 @@ namespace Npgsql {
 			string logtxt = "";
 			DateTime logtxt_dt = DateTime.Now;
 			var pc = PrepareCommand(cmd, cmdType, cmdText, cmdParms, ref logtxt);
-			logtxt += $"PrepareCommand: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms\r\n";
+			logtxt += $"PrepareCommand: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
 			Exception ex = Lib.Trys(delegate () {
 				logtxt_dt = DateTime.Now;
 				if (cmd.Connection.State == ConnectionState.Closed) cmd.Connection.Open();
-				logtxt += $"Open: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms\r\n";
+				logtxt += $"Open: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
 				try {
 					logtxt_dt = DateTime.Now;
 					NpgsqlDataReader dr = cmd.ExecuteReader();
-					logtxt += $"ExecuteReader: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms\r\n";
+					logtxt += $"ExecuteReader: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
 					while (true) {
 						logtxt_dt = DateTime.Now;
 						bool isread = dr.Read();
-						logtxt += $"	dr.Read: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms\r\n";
+						logtxt += $"	dr.Read: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
 						if (isread == false) break;
 
 						if (readerHander != null) {
 							logtxt_dt = DateTime.Now;
 							object[] values = new object[dr.FieldCount];
 							dr.GetValues(values);
-							logtxt += $"	dr.GetValues: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms\r\n";
+							logtxt += $"	dr.GetValues: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
 							logtxt_dt = DateTime.Now;
 							readerHander(dr);
-							logtxt += $"	readerHander: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms ({string.Join(",", values)})\r\n";
+							logtxt += $"	readerHander: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms ({string.Join(",", values)})\r\n";
 						}
 					}
 					logtxt_dt = DateTime.Now;
 					dr.Dispose();
-					logtxt += $"ExecuteReader_dispose: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms\r\n";
+					logtxt += $"ExecuteReader_dispose: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
 				} catch {
 					throw;
 				}
@@ -108,7 +108,7 @@ namespace Npgsql {
 
 			logtxt_dt = DateTime.Now;
 			if (pc.Tran == null) this.Pool.ReleaseConnection(pc.Conn);
-			logtxt += $"ReleaseConnection: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms ";
+			logtxt += $"ReleaseConnection: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms";
 			LoggerException(cmd, ex, dt, logtxt);
 		}
 		public object[][] ExeucteArray(CommandType cmdType, string cmdText, params NpgsqlParameter[] cmdParms) {
