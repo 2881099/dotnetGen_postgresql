@@ -1221,8 +1221,8 @@ namespace {0}.DAL {{
 					#region 如果没有主键的处理UpdateBuild
 					foreach (ColumnInfo col in table.Columns) {
 						if (col.IsIdentity ||
-							col.IsPrimaryKey ||
-							table.PrimaryKeys.FindIndex(delegate (ColumnInfo pkf) { return pkf.Name == col.Name; }) != -1) continue;
+							col.IsPrimaryKey && col.Type == NpgsqlDbType.Uuid ||
+							table.PrimaryKeys.FindIndex(delegate (ColumnInfo pkf) { return pkf.Name == col.Name && pkf.Type == NpgsqlDbType.Uuid; }) != -1) continue;
 						string arrParm = "";
 						string arrUnde = "";
 						string arrUndeSql = "";
