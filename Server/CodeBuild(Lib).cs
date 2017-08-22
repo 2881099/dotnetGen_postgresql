@@ -196,7 +196,7 @@ namespace Server {
 				case NpgsqlDbType.Text: return "dr.GetString(index)";
 
 				case NpgsqlDbType.Timestamp:
-				case NpgsqlDbType.TimestampTZ: return "dr.GetTimeStamp(index).DateTime";
+				case NpgsqlDbType.TimestampTZ: return "dr.GetTimeStamp(index).ToDateTime()";
 				case NpgsqlDbType.Date: return "(DateTime)dr.GetDate(index)";
 				case NpgsqlDbType.Time:
 				case NpgsqlDbType.TimeTZ: return "dr.GetTimeSpan(index)";

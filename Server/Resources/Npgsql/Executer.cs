@@ -29,7 +29,7 @@ namespace Npgsql {
 			if (e == null) return;
 			string log = $"数据库出错（执行SQL）〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓\r\n{cmd.CommandText}\r\n";
 			foreach (NpgsqlParameter parm in cmd.Parameters)
-				log += Lib.PadRight(parm.ParameterName, 20) + " = " + Lib.PadRight(parm.Value == null ? "NULL" : parm.Value, 20) + "\r\n";
+				log += Lib.PadRight(parm.ParameterName, 20) + " = " + Lib.PadRight(parm.Value ?? "NULL", 20) + "\r\n";
 
 			log += e.Message;
 			Log.LogError(log);
@@ -46,12 +46,11 @@ namespace Npgsql {
 			for (int a = 0; a < parms.Length; a++) {
 				if (parms[a] == null) nparms[a] = "NULL";
 				else {
-					decimal trydec;
 					if (parms[a] is bool || parms[a] is bool?)
 						nparms[a] = (bool)parms[a] ? "'t'" : "'f'";
 					else if (parms[a] is string || parms[a] is Enum)
 						nparms[a] = string.Concat("'", parms[a].ToString().Replace("'", "''"), "'");
-					else if (decimal.TryParse(string.Concat(parms[a]), out trydec))
+					else if (decimal.TryParse(string.Concat(parms[a]), out decimal trydec))
 						nparms[a] = parms[a];
 					else if (parms[a] is DateTime) {
 						DateTime dt = (DateTime)parms[a];
@@ -318,10 +317,10 @@ namespace Npgsql {
 		#endregion
 
 		public static NpgsqlRange<T> ParseNpgsqlRange<T>(string s) {
-			if (string.IsNullOrEmpty(s) || s == "empty") return NpgsqlRange<T>.Empty();
+			if (string.IsNullOrEmpty(s) || s == "empty") return NpgsqlRange<T>.Empty;
 			string s1 = s.Trim('(', ')', '[', ']');
 			string[] ss = s1.Split(new char[] { ',' }, 2);
-			if (ss.Length != 2) return NpgsqlRange<T>.Empty();
+			if (ss.Length != 2) return NpgsqlRange<T>.Empty;
 			T t1 = default(T);
 			T t2 = default(T);
 			if (!string.IsNullOrEmpty(ss[0])) t1 = (T)Convert.ChangeType(ss[0], typeof(T));
