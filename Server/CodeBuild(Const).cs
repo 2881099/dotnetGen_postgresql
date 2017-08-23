@@ -1055,7 +1055,6 @@ return rTn;"");
 		<PackageReference Include=""Microsoft.Extensions.Logging"" Version=""2.0.0"" />
 		<PackageReference Include=""Microsoft.Extensions.Logging.Abstractions"" Version=""2.0.0"" />
 		<PackageReference Include=""Microsoft.Extensions.Options.ConfigurationExtensions"" Version=""2.0.0"" />
-		<PackageReference Include=""MySql.Data"" Version=""8.0.8-dmr"" />
 		<PackageReference Include=""Npgsql"" Version=""3.2.5"" />
 		<PackageReference Include=""Newtonsoft.Json"" Version=""10.0.3"" />
 		<PackageReference Include=""System.Collections.Specialized"" Version=""4.3.0"" />
@@ -1083,11 +1082,11 @@ return rTn;"");
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include=""Microsoft.AspNetCore.Mvc"" Version=""2.0.0"" />
+		<PackageReference Include=""Microsoft.AspNetCore.Session"" Version=""2.0.0"" />
 		<PackageReference Include=""Microsoft.AspNetCore.Diagnostics"" Version=""2.0.0"" />
 		<PackageReference Include=""Microsoft.Extensions.Configuration.EnvironmentVariables"" Version=""2.0.0"" />
 		<PackageReference Include=""Microsoft.Extensions.Configuration.FileExtensions"" Version=""2.0.0"" />
 		<PackageReference Include=""Microsoft.Extensions.Configuration.Json"" Version=""2.0.0"" />
-		<PackageReference Include=""Microsoft.AspNetCore.Session"" Version=""2.0.0"" />
 	</ItemGroup>
 </Project>
 
@@ -1365,7 +1364,7 @@ namespace {0}.WebHost {{
 		public IHostingEnvironment env {{ get; }}
 
 		public void ConfigureServices(IServiceCollection services) {{
-			services.AddSingleton<IDistributedCache>(new RedisCache());
+			services.AddSingleton<IDistributedCache>(new RedisSuperCache());
 			services.AddSingleton<IConfigurationRoot>(Configuration);
 			services.AddSingleton<IHostingEnvironment>(env);
 
@@ -1427,15 +1426,13 @@ namespace {0}.WebHost {{
 		<ProjectReference Include=""..\Infrastructure\Infrastructure.csproj"" />
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include=""Microsoft.AspNetCore.Server.IISIntegration"" Version=""2.0.0"" />
-		<PackageReference Include=""Microsoft.AspNetCore.Server.Kestrel"" Version=""2.0.0"" />
+		<PackageReference Include=""Microsoft.AspNetCore.All"" Version=""2.0.0"" />
 		<PackageReference Include=""Microsoft.Extensions.Logging.Console"" Version=""2.0.0"" />
 		<PackageReference Include=""Microsoft.Extensions.Logging.Debug"" Version=""2.0.0"" />
 		<PackageReference Include=""NLog.Extensions.Logging"" Version=""1.0.0-rtm-beta5"" />
 		<PackageReference Include=""NLog.Web.AspNetCore"" Version=""4.4.1"" />
 		<PackageReference Include=""System.Text.Encoding.CodePages"" Version=""4.4.0"" />
-		<PackageReference Include=""Swashbuckle.AspNetCore.SwaggerGen"" Version=""1.0.0-*"" />
-		<PackageReference Include=""Swashbuckle.AspNetCore.SwaggerUi"" Version=""1.0.0-*"" />
+		<PackageReference Include=""Swashbuckle.AspNetCore"" Version=""1.0.0"" />
 	</ItemGroup>
 	<ItemGroup>
 		<DotNetCliToolReference Include=""Microsoft.DotNet.Watcher.Tools"" Version=""2.0.0"" />

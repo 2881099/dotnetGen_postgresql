@@ -205,16 +205,10 @@ namespace Server {
 				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\CSRedis\Internal\Utilities\Serializer.cs"), Deflate.Compress(Properties.Resources.CSRedis_Internal_Utilities_Serializer_cs)));
 				#endregion
 				#region Microsoft.Extensions.Caching.Redis
-				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\Microsoft.Extensions.Caching.Redis\RedisCache.cs"), Deflate.Compress(Properties.Resources.Microsoft_Extensions_Caching_Redis_RedisCache_cs)));
+				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\Microsoft.Extensions.Caching.Redis\RedisCache.cs"), Deflate.Compress(Properties.Resources.Microsoft_Extensions_Caching_Redis_RedisSuperCache_cs)));
 				clearSb();
 				#endregion
 
-				#region MySql.Data.MySqlClient
-				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\MySql.Data.MySqlClient\ConnectionPool.cs"), Deflate.Compress(Properties.Resources.MySql_Data_MySqlClient_ConnectionPool_cs)));
-				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\MySql.Data.MySqlClient\Executer.cs"), Deflate.Compress(Properties.Resources.MySql_Data_MySqlClient_Executer_cs)));
-				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\MySql.Data.MySqlClient\SelectBuild.cs"), Deflate.Compress(Properties.Resources.MySql_Data_MySqlClient_SelectBuild_cs)));
-				clearSb();
-				#endregion
 				#region Npgsql
 				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\Npgsql\ConnectionPool.cs"), Deflate.Compress(Properties.Resources.Npgsql_ConnectionPool_cs)));
 				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\Npgsql\Executer.cs"), Deflate.Compress(Properties.Resources.Npgsql_Executer_cs)));
