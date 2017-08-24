@@ -364,7 +364,7 @@ var a = `将_Enum.cs的内容复制进来，然后去chrome控制台运行，得到枚举创建sql`;
 var sb = '';
 var b = a.replace(/public enum\s+Et_([^ ]+) \{([^\}]+)\}/g, function($0, $1, $2) {
 var c = $2.replace(/[ \t\n]/g, '').replace(/(=1)?,/g, ""','"");
-sb += 'create type et_' + $1 + ' as enum(\'' + c + '\');\r\n'
+sb += 'create type et_' + $1.replace('ENUM', '') + ' as enum(\'' + c + '\');\r\n'
 });
 
 console.log(sb);
