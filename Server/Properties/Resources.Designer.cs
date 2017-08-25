@@ -1939,15 +1939,40 @@ namespace Server.Properties {
         ///using System.Linq;
         ///using System.Threading.Tasks;
         ///
+        ///[ServiceFilter(typeof(CustomExceptionFilter))]
         ///public partial class BaseController : Controller {
         ///	public ILogger _logger;
         ///	public ISession Session { get { return HttpContext.Session; } }
         ///	public HttpRequest Req { get { return Request; } }
-        ///	public HttpResponse Res { get { return Response; } [字符串的其余部分被截断]&quot;; 的本地化字符串。
+        ///	pu [字符串的其余部分被截断]&quot;; 的本地化字符串。
         /// </summary>
         internal static string Infrastructure_Controllers_BaseController_cs {
             get {
                 return ResourceManager.GetString("Infrastructure_Controllers_BaseController_cs", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 using Microsoft.AspNetCore.Hosting;
+        ///using Microsoft.AspNetCore.Http;
+        ///using Microsoft.AspNetCore.Mvc;
+        ///using Microsoft.AspNetCore.Mvc.Filters;
+        ///using Microsoft.Extensions.Configuration;
+        ///using Microsoft.Extensions.Logging;
+        ///using System;
+        ///using System.Collections.Generic;
+        ///using System.Security.Cryptography;
+        ///using System.Text;
+        ///using System.Threading.Tasks;
+        ///
+        ///public class CustomExceptionFilter : Attribute, IExceptionFilter {
+        ///	private ILogger _logger = null;
+        ///	private IConfigurationRoot _cfg = null;
+        ///	pr [字符串的其余部分被截断]&quot;; 的本地化字符串。
+        /// </summary>
+        internal static string Infrastructure_Controllers_CustomExceptionFilter_cs {
+            get {
+                return ResourceManager.GetString("Infrastructure_Controllers_CustomExceptionFilter_cs", resourceCulture);
             }
         }
         
