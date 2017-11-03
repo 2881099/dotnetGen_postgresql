@@ -25,7 +25,7 @@ namespace MakeCode {
 		public string ConnectionString {
 			get {
 				string connStr = "Host={0};Port={1};Username={2};Password={3};Database={4};";
-				return string.Format(connStr, this._client.Server, this._client.Port, this._client.Username, this._client.Password, this._client.Database);
+				return string.Format(connStr, this._client.Server, this._client.Port, this._client.Username, this._client.Password, string.IsNullOrEmpty(this._client.Database) ? "postgres" : this._client.Database);
 			}
 		}
 
