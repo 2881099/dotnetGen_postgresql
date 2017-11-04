@@ -1993,7 +1993,10 @@ namespace {0}.BLL {{
 							//				itemSetValuePK += string.Format(@"
 							//item.{0} = {0};", csUName);
 							if (col88.IsIdentity) ;
-							else {
+							else if (csType == "Guid?") {
+								itemSetValuePKInsert += string.Format(@"
+			item.{0} = Guid.NewGuid();", csUName);
+							} else {
 								itemSetValuePKInsert += string.Format(@"
 			item.{0} = {0};", csUName);
 								itemCsParamInsertForm += string.Format(", [FromForm] {0} {1}", csType, csUName);
@@ -2357,6 +2360,15 @@ namespace {0}.BLL {{
 							<tr>
 								<td>{1}</td>
 								<td><input name=""{0}"" type=""text"" readonly class=""datepicker"" style=""width:20%;background-color:#ddd;"" /></td>
+							</tr>
+						}}", csUName, comment);
+						} else if (col.IsPrimaryKey && csType == "Guid?") {
+							//uuidÖ÷¼ü
+							sb4.AppendFormat(@"
+						@if (item != null) {{
+							<tr>
+								<td>{1}</td>
+								<td><input name=""{0}"" type=""text"" readonly class=""datepicker"" style=""width:60%;background-color:#ddd;"" /></td>
 							</tr>
 						}}", csUName, comment);
 						} else if (fks_comb.Count == 1) {
