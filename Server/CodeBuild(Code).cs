@@ -1435,7 +1435,8 @@ namespace {0}.BLL {{
 						parmsNoneType += CodeBuild.UFString(columnInfo.Name) + ", ";
 						parmsNodeTypeUpdateCacheRemove += "item." + CodeBuild.UFString(columnInfo.Name) + ", \"_,_\", ";
 						cacheCond += CodeBuild.UFString(columnInfo.Name) + " == null || ";
-						whereCondi += string.Format(".Where{0}({0})", CodeBuild.UFString(columnInfo.Name));
+						whereCondi += string.Format(".Where{0}({1})", CodeBuild.UFString(columnInfo.Name), 
+							columnInfo.CsType.Contains("?") && !cs[0].IsPrimaryKey ? string.Concat("new ", columnInfo.CsType, "(", CodeBuild.UFString(columnInfo.Name), ")") : CodeBuild.UFString(columnInfo.Name));
 					}
 					parms = parms.Substring(0, parms.Length - 2);
 					parmsBy = parmsBy.Substring(0, parmsBy.Length - 3);
@@ -1467,7 +1468,7 @@ namespace {0}.BLL {{
 		parms, parmsNoneType, cacheCond, whereCondi);
 
 					sb4.AppendFormat(@"
-			RedisHelper.Remove(string.Concat(""{0}_BLL_{1}{2}_"", {3}));", solutionName, uClass_Name, cs[0].IsPrimaryKey ? string.Empty : parmsBy, parmsNodeTypeUpdateCacheRemove);
+				string.Concat(""{0}_BLL_{1}{2}_"", {3}), ", solutionName, uClass_Name, cs[0].IsPrimaryKey ? string.Empty : parmsBy, parmsNodeTypeUpdateCacheRemove);
 				}
 
 				if (table.PrimaryKeys.Count > 0) {
@@ -1510,6 +1511,9 @@ namespace {0}.BLL {{
 			return Insert(new {0}Info {{{2}}});
 		}}", uClass_Name, CsParam2, CsParamNoType2);
 
+					var redisRemove = sb4.ToString();
+					if (!string.IsNullOrEmpty(redisRemove)) redisRemove = string.Concat(@"
+			RedisHelper.Remove(", redisRemove.Substring(0, redisRemove.Length - 2), ");");
 					sb1.AppendFormat(@"
 		public static {0}Info Insert({0}Info item) {{
 			item = dal.Insert(item);
@@ -1521,7 +1525,7 @@ namespace {0}.BLL {{
 		}}
 		#endregion
 {1}
-", uClass_Name, sb3.ToString(), sb4.ToString());
+", uClass_Name, sb3.ToString(), redisRemove);
 					#endregion
 				}
 
