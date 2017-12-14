@@ -1173,9 +1173,12 @@ namespace {0}.DAL {{
 		public object GetItem(NpgsqlDataReader dr, ref int index) {{
 			{0}Info item = new {0}Info();", uClass_Name);
 
-				foreach (ColumnInfo columnInfo in table.Columns)
+				foreach (ColumnInfo columnInfo in table.Columns) {
 					sb1.AppendFormat(@"
 			if (!dr.IsDBNull(++index)) item.{0} = {1};", (columnInfo.CsType == "JToken" ? "_" : "") + CodeBuild.UFString(columnInfo.Name), CodeBuild.GetDataReaderMethod(columnInfo.Type, columnInfo.CsType));
+					if (columnInfo.IsPrimaryKey)
+						sb1.AppendFormat(@" if (item.{0} == null) return null;", (columnInfo.CsType == "JToken" ? "_" : "") + CodeBuild.UFString(columnInfo.Name));
+				}
 
 				sb1.AppendFormat(@"
 			return item;
