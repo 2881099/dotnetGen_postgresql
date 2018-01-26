@@ -1423,9 +1423,21 @@ namespace {0}.BLL {{
 				int.TryParse(RedisHelper.Configuration[""{0}_BLL_ITEM_CACHE:Timeout""], out itemCacheTimeout);
 		}}", solutionName, uClass_Name);
 
+				Dictionary<string, bool> uniques_dic = new Dictionary<string, bool>();
+				foreach (List<ColumnInfo> cs in table.Uniques) {
+					string parms = string.Empty;
+					foreach (ColumnInfo columnInfo in cs) {
+						parms += columnInfo.CsType.Replace("?", "") + " " + CodeBuild.UFString(columnInfo.Name) + ", ";
+					}
+					parms = parms.Substring(0, parms.Length - 2);
+					if (uniques_dic.ContainsKey(parms)) continue;
+					uniques_dic.Add(parms, true);
+				}
+
 				Dictionary<string, bool> del_exists2 = new Dictionary<string, bool>();
 				foreach (List<ColumnInfo> cs in table.Uniques) {
 					string parms = string.Empty;
+					string parmsNewItem = string.Empty;
 					string parmsBy = "By";
 					string parmsNoneType = string.Empty;
 					string parmsNodeTypeUpdateCacheRemove = string.Empty;
@@ -1434,6 +1446,7 @@ namespace {0}.BLL {{
 					string whereCondi = string.Empty;
 					foreach (ColumnInfo columnInfo in cs) {
 						parms += columnInfo.CsType.Replace("?", "") + " " + CodeBuild.UFString(columnInfo.Name) + ", ";
+						parmsNewItem += CodeBuild.UFString(columnInfo.Name) + " = " + CodeBuild.UFString(columnInfo.Name) + ", ";
 						parmsBy += CodeBuild.UFString(columnInfo.Name) + "And";
 						parmsNoneType += CodeBuild.UFString(columnInfo.Name) + ", ";
 						parmsNodeTypeUpdateCacheRemove += "item." + CodeBuild.UFString(columnInfo.Name) + ", \"_,_\", ";
@@ -1442,6 +1455,7 @@ namespace {0}.BLL {{
 							columnInfo.CsType.Contains("?") && !cs[0].IsPrimaryKey ? string.Concat("new ", columnInfo.CsType, "(", CodeBuild.UFString(columnInfo.Name), ")") : CodeBuild.UFString(columnInfo.Name));
 					}
 					parms = parms.Substring(0, parms.Length - 2);
+					parmsNewItem = parmsNewItem.Substring(0, parmsNewItem.Length - 2);
 					parmsBy = parmsBy.Substring(0, parmsBy.Length - 3);
 					parmsNoneType = parmsNoneType.Substring(0, parmsNoneType.Length - 2);
 					parmsNodeTypeUpdateCacheRemove = parmsNodeTypeUpdateCacheRemove.Substring(0, parmsNodeTypeUpdateCacheRemove.Length - 9);
@@ -1449,11 +1463,19 @@ namespace {0}.BLL {{
 
 					if (del_exists2.ContainsKey(parms)) continue;
 					del_exists2.Add(parms, true);
-					sb2.AppendFormat(@"
+
+					if (uniques_dic.Count > 1)
+						sb2.AppendFormat(@"
 		public static int Delete{2}({0}) {{
 			if (itemCacheTimeout > 0) RemoveCache(GetItem{2}({1}));
 			return dal.Delete{2}({1});
 		}}", parms, parmsNoneType, cs[0].IsPrimaryKey ? string.Empty : parmsBy);
+					else
+						sb2.AppendFormat(@"
+		public static int Delete{2}({0}) {{
+			if (itemCacheTimeout > 0) RemoveCache(new {3}Info {{ {4} }});
+			return dal.Delete{2}({1});
+		}}", parms, parmsNoneType, cs[0].IsPrimaryKey ? string.Empty : parmsBy, uClass_Name, parmsNewItem);
 
 
 					sb3.AppendFormat(@"
@@ -1483,8 +1505,8 @@ namespace {0}.BLL {{
 		#region delete, update, insert
 {0}
 ", sb2.ToString());
-
-					sb1.AppendFormat(@"
+					if (uniques_dic.Count > 1)
+						sb1.AppendFormat(@"
 		public static int Update({1}Info item) {{
 			if (itemCacheTimeout > 0) RemoveCache(item);
 			return dal.Update(item);
@@ -1503,6 +1525,31 @@ namespace {0}.BLL {{
 			get {{ return new {0}.DAL.{1}.SqlUpdateBuild(); }}
 		}}
 ", solutionName, uClass_Name, pkCsParam.Replace("?", ""), pkCsParamNoType);
+					else {
+						var xxxxtempskdf = "";
+						foreach(var xxxxtempskdfstr in pkCsParamNoType.Split(new string[] { ", " }, StringSplitOptions.None)) {
+							xxxxtempskdf += xxxxtempskdfstr + " = " + xxxxtempskdfstr + ", ";
+						}
+						sb1.AppendFormat(@"
+		public static int Update({1}Info item) {{
+			if (itemCacheTimeout > 0) RemoveCache(item);
+			return dal.Update(item);
+		}}
+		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy({2}) {{
+			return UpdateDiy(null, {3});
+		}}
+		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy({1}Info item, {2}) {{
+			if (itemCacheTimeout > 0) RemoveCache(item ?? new {1}Info {{ {4} }});
+			return new {0}.DAL.{1}.SqlUpdateBuild(item, {3});
+		}}
+		/// <summary>
+		/// 用于批量更新
+		/// </summary>
+		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiyDangerous {{
+			get {{ return new {0}.DAL.{1}.SqlUpdateBuild(); }}
+		}}
+", solutionName, uClass_Name, pkCsParam.Replace("?", ""), pkCsParamNoType, xxxxtempskdf.Substring(0, xxxxtempskdf.Length - 2));
+					}
 					if (table.Columns.Count > 5)
 						sb1.AppendFormat(@"
 		/// <summary>
