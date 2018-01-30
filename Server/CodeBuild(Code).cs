@@ -1767,7 +1767,17 @@ namespace {0}.BLL {{
 						}
 						sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}Any(params {2}[] {1}) {{
+			if ({1} == null) return this.Where(@""a.""""{3}"""" IS NULL"");
 			return this.Where1Or(@""a.""""{3}"""" @> array[{{0}}::{4}]"", {1});
+		}}", uClass_Name, fkcsBy, csType.Replace("?", ""), col.Name, col.SqlType);
+						return;
+					}
+					
+					if (col.Type == NpgsqlDbType.Jsonb) {
+						sb6.AppendFormat(@"
+		public {0}SelectBuild Where{1}Contain(params JToken[] {1}) {{
+			if ({1} == null) return this.Where(@""a.""""{3}"""" IS NULL"");
+			return this.Where1Or(@""a.""""{3}"""" @> {{0}}::jsonb"", {1}.Select(a => a?.ToString()).Where(a => !string.IsNullOrEmpty(a)).ToArray());
 		}}", uClass_Name, fkcsBy, csType.Replace("?", ""), col.Name, col.SqlType);
 						return;
 					}
