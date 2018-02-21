@@ -66,7 +66,8 @@ a.tablename ,
 'T'
 from pg_tables a
 inner join pg_namespace b on b.nspname = a.schemaname
-where a.schemaname not in ('pg_catalog', 'information_schema')
+where a.schemaname not in ('pg_catalog', 'information_schema', 'topology')
+and b.nspname || '.' || a.tablename not in ('public.spatial_ref_sys')
 
 union all
 
@@ -77,7 +78,8 @@ a.relname,
 'V'
 from pg_class a
 inner join pg_namespace b on b.oid = a.relnamespace
-where b.nspname not in ('pg_catalog', 'information_schema') and a.relkind in ('m','v')
+where b.nspname not in ('pg_catalog', 'information_schema') and a.relkind in ('m','v') 
+and b.nspname || '.' || a.relname not in ('public.geography_columns','public.geometry_columns','public.raster_columns','public.raster_overviews')
 "));
 			if (ds == null) return loc1;
 

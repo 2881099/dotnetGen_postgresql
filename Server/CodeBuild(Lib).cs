@@ -59,7 +59,8 @@ namespace Server {
 				case "tstzrange": return NpgsqlDbType.TimestampTZRange;
 				case "daterange": return NpgsqlDbType.DateRange;
 
-				case "hstore":return NpgsqlDbType.Hstore;
+				case "hstore": return NpgsqlDbType.Hstore;
+				case "geometry": return NpgsqlDbType.Geometry;
 				default: return NpgsqlDbType.Unknown;
 			}
 		}
@@ -114,6 +115,7 @@ namespace Server {
 				case NpgsqlDbType.DateRange: return "{0}.Value";
 
 				case NpgsqlDbType.Hstore: return "{0}";
+				case NpgsqlDbType.Geometry: return "{0}";
 				case NpgsqlDbType.Composite:
 				case NpgsqlDbType.Enum: return "{0}.Value";
 				default: return "";
@@ -174,6 +176,7 @@ namespace Server {
 				case NpgsqlDbType.DateRange: return string.Format(arr, "NpgsqlRange<DateTime>" + (attndims > 0 ? "" : "?"));
 
 				case NpgsqlDbType.Hstore: return string.Format(arr, enumType);
+				case NpgsqlDbType.Geometry: return string.Format(arr, "PostgisGeometry");
 				case NpgsqlDbType.Composite: 
 				case NpgsqlDbType.Enum: return string.Format(arr, enumType + (attndims > 0 ? "" : "?"));
 				default: return "object";
@@ -231,6 +234,7 @@ namespace Server {
 				case NpgsqlDbType.DateRange: return "dr.GetFieldValue<NpgsqlRange<DateTime>>(index)";
 
 				case NpgsqlDbType.Hstore: return "dr.GetValue(index) as Dictionary<string, string>";
+				case NpgsqlDbType.Geometry: return "dr.GetValue(index) as PostgisGeometry";
 				case NpgsqlDbType.Enum:
 				case NpgsqlDbType.Composite: return "dr.GetFieldValue<" + csType.Replace("?", "") + ">(index)";
 				default: return "dr.GetValue(index)";
@@ -288,6 +292,7 @@ namespace Server {
 				case NpgsqlDbType.DateRange: return "(NpgsqlRange<DateTime>){0}";
 
 				case NpgsqlDbType.Hstore: return "{0} as Dictionary<string, string>";
+				case NpgsqlDbType.Geometry: return "{0} as PostgisGeometry";
 				case NpgsqlDbType.Enum:
 				case NpgsqlDbType.Composite: return "(" + csType + "){0}";
 				default: return "{0}";
@@ -344,6 +349,7 @@ namespace Server {
 				case NpgsqlDbType.DateRange: return string.Format("{0} == null ? \"null\" : {0}.ToString()", CodeBuild.UFString(columnInfo.Name));
 
 				case NpgsqlDbType.Hstore:
+				case NpgsqlDbType.Geometry:
 				case NpgsqlDbType.Enum:
 				case NpgsqlDbType.Composite:
 				default: return string.Format("{0} == null ? \"null\" : {0}.ToString()", CodeBuild.UFString(columnInfo.Name));
@@ -402,6 +408,7 @@ namespace Server {
 				case NpgsqlDbType.DateRange: return string.Format("{0} == null ? \"null\" : {0}.ToString()", CodeBuild.UFString(columnInfo.Name));
 
 				case NpgsqlDbType.Hstore:
+				case NpgsqlDbType.Geometry:
 				case NpgsqlDbType.Enum:
 				case NpgsqlDbType.Composite:
 				default: return "_" + CodeBuild.UFString(columnInfo.Name) + " == null ? \"null\" : _" + CodeBuild.UFString(columnInfo.Name) + ".ToString().Replace(\"|\", StringifySplit)";
@@ -520,6 +527,9 @@ namespace Server {
 
 				case NpgsqlDbType.Enum:
 				case NpgsqlDbType.Composite: type += " | NpgsqlDbType." + col.Type.ToString(); type2 = "SpecificType = typeof(" + Regex.Replace(col.CsType.Replace("?", ""), @"\[\,*\]", "") + "), "; break;
+
+				case NpgsqlDbType.Hstore:
+				case NpgsqlDbType.Geometry:
 				default: type += " | NpgsqlDbType." + col.Type.ToString(); break;
 			}
 			string returnValue = place + string.Format("new NpgsqlParameter(\"{0}\", {1}, {2}) {{ {4}Value = {3} }}, \r\n",

@@ -396,7 +396,8 @@ inner join pg_attribute c on c.attrelid = b.oid and c.attnum > 0
 inner join pg_type d on d.oid = c.atttypid
 inner join pg_namespace ns on ns.oid = a.typnamespace
 left join pg_namespace ns2 on ns2.oid = d.typnamespace
-where ns.nspname in ('{0}')", string.Join("','", owners.ToArray()));
+where ns.nspname || '.' || a.typname not in ('public.reclassarg','public.geomval','public.addbandarg','public.agg_samealignment','public.geometry_dump','public.summarystats','public.agg_count','public.valid_detail','public.rastbandarg','public.unionarg')
+and ns.nspname in ('{0}')", string.Join("','", owners.ToArray()));
 			ds = this.GetDataSet(sql);
 			_types = new Dictionary<string, string>();
 			foreach (DataRow dr in ds.Tables[0].Rows) {
@@ -1857,7 +1858,7 @@ namespace {0}.BLL {{
 						return;
 					}
 					if (csType == "string") {
-						if (col.Length >= 0 && col.Length < 301)
+						if (col.Length < 301)
 							sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}(params {2}[] {1}) {{
 			return this.Where1Or(@""a.""""{3}"""" = {{0}}"", {1});
@@ -1867,6 +1868,21 @@ namespace {0}.BLL {{
 			if ({1} == null || {1}.Where(a => !string.IsNullOrEmpty(a)).Any() == false) return this;
 			return this.Where1Or(@""a.""""{3}"""" ILIKE {{0}}"", {1}.Select(a => ""%"" + a + ""%"").ToArray());
 		}}", uClass_Name, fkcsBy, csType, col.Name);
+						return;
+					}
+					if (csType == "PostgisGeometry") {
+						sb6.AppendFormat(@"
+		/// <summary>
+		/// 查找地理位置多少米范围内的记录，距离由近到远排序
+		/// </summary>
+		/// <param name=""point"">经纬度</param>
+		/// <param name=""meter"">米</param>
+		/// <returns></returns>
+		public {0}SelectBuild Where{1}ST_dwithin(PostgisPoint point, double meter) {{
+			if (point.SRID == 0) point.SRID = 4326;
+			return this.Where(@""st_dwithin(st_transform({{0}},26986), st_transform(a.""""{3}"""",26986), {{1}})"", new NpgsqlParameter {{ Value = point }}, meter)
+				.OrderBy(@""st_distance({{0}}, a.""""{3}"""")"", new NpgsqlParameter {{ Value = point }});
+		}}", uClass_Name, fkcsBy, csType.Replace("?", ""), col.Name);
 						return;
 					}
 				});
