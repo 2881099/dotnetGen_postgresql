@@ -1041,10 +1041,10 @@ namespace {0}.Model {{
 				sb1.AppendFormat(@"
 {1}{2}
 		#region 序列化，反序列化
-		public string Stringify() => JsonConvert.SerializeObject(this, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
+		public string Stringify() => JsonConvert.SerializeObject(this, new JsonSerializerSettings {{ TypeNameHandling = TypeNameHandling.All }});
 		public static {0}Info Parse(string stringify) {{
 			if (string.IsNullOrEmpty(stringify)) return null;
-			return JsonConvert.DeserializeObject<{0}Info>(stringify, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
+			return JsonConvert.DeserializeObject<{0}Info>(stringify, new JsonSerializerSettings {{ TypeNameHandling = TypeNameHandling.All }});
 		}}
 		#endregion
 
