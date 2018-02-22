@@ -1041,10 +1041,10 @@ namespace {0}.Model {{
 				sb1.AppendFormat(@"
 {1}{2}
 		#region 序列化，反序列化
-		public string Stringify() => JsonConvert.SerializeObject(this);
+		public string Stringify() => JsonConvert.SerializeObject(this, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
 		public static {0}Info Parse(string stringify) {{
 			if (string.IsNullOrEmpty(stringify)) return null;
-			return JsonConvert.DeserializeObject<{0}Info>(stringify);
+			return JsonConvert.DeserializeObject<{0}Info>(stringify, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
 		}}
 		#endregion
 
@@ -1880,8 +1880,8 @@ namespace {0}.BLL {{
 		/// <returns></returns>
 		public {0}SelectBuild Where{1}ST_dwithin(PostgisPoint point, double meter) {{
 			if (point.SRID == 0) point.SRID = 4326;
-			return this.Where(@""st_dwithin(st_transform({{0}},26986), st_transform(a.""""{3}"""",26986), {{1}})"", new NpgsqlParameter {{ Value = point }}, meter)
-				.OrderBy(@""st_distance({{0}}, a.""""{3}"""")"", new NpgsqlParameter {{ Value = point }});
+			return this.Where(@""st_dwithin({{0}}::geography, a.""""{3}""""::geography, {{1}})"", new NpgsqlParameter {{ Value = point }}, meter)
+				.OrderBy(@""st_distance({{0}}::geography, a.""""{3}""""::geography)"", new NpgsqlParameter {{ Value = point }});
 		}}", uClass_Name, fkcsBy, csType.Replace("?", ""), col.Name);
 						return;
 					}
