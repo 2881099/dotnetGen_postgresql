@@ -1041,10 +1041,10 @@ namespace {0}.Model {{
 				sb1.AppendFormat(@"
 {1}{2}
 		#region 序列化，反序列化
-		public string Stringify() => JsonConvert.SerializeObject(this, new JsonSerializerSettings {{ TypeNameHandling = TypeNameHandling.All }});
+		public string Stringify() => JsonConvert.SerializeObject(this{13});
 		public static {0}Info Parse(string stringify) {{
 			if (string.IsNullOrEmpty(stringify)) return null;
-			return JsonConvert.DeserializeObject<{0}Info>(stringify, new JsonSerializerSettings {{ TypeNameHandling = TypeNameHandling.All }});
+			return JsonConvert.DeserializeObject<{0}Info>(stringify{13});
 		}}
 		#endregion
 
@@ -1079,7 +1079,9 @@ namespace {0}.Model {{
 ", uClass_Name, "", "", sb5.ToString(), sb2.ToString(), sb6.ToString(), table.Columns.Count, sb7.ToString(), sb8.ToString(), sb9.ToString(), sb10.ToString(), sb16.ToString(),
 	table.Columns.Find(delegate (ColumnInfo fccc) {
 		return fccc.Name.ToLower() == "item";
-	}) == null ? "" : "//");
+	}) == null ? "" : "//", table.Columns.Find(delegate (ColumnInfo fccc2) {
+		return fccc2.Type == NpgsqlDbType.Geometry;
+	}) == null ? "" : ", new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All }");
 
 				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, solutionName, @".db\Model\", basicName, @"\", uClass_Name, "Info.cs"), Deflate.Compress(Is_System_ComponentModel ? sb1.ToString().Replace("using System.Reflection;", "using System.ComponentModel;\r\nusing System.Reflection;") : sb1.ToString())));
 				clearSb();
