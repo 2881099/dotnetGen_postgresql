@@ -1878,7 +1878,7 @@ namespace {0}.BLL {{
 		/// 查找地理位置多少米范围内的记录，距离由近到远排序
 		/// </summary>
 		/// <param name=""point"">经纬度</param>
-		/// <param name=""meter"">米(<=0时无限制)</param>
+		/// <param name=""meter"">米(=0时无限制)</param>
 		/// <returns></returns>
 		public {0}SelectBuild Where{1}ST_dwithin(NpgsqlPoint point, double meter = 0) {{
 			return this.Where(meter > 0, @""st_dwithin({{0}}::geometry::geography, a.""""{3}""""::geometry::geography, {{1}})"", new NpgsqlParameter {{ NpgsqlDbType = NpgsqlDbType.Point, Value = point }}, meter)
