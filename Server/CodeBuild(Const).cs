@@ -120,6 +120,7 @@ namespace {0}.DAL {{
 			}}
 		}}
 		public static Executer Instance {{ get; }} = new Executer(new LoggerFactory().CreateLogger(""{0}_DAL_sqlhelper""), ConnectionString);
+
 		static PSqlHelper() {{
 			var nameTranslator = new NpgsqlMapNameTranslator();{2}
 		}}
@@ -383,29 +384,38 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using Newtonsoft.Json;
+using NpgsqlTypes;
+using {0}.Model;
 
-namespace {0}.Model {{
-	public static partial class ExtensionMethods {{{1}
-		public static string GetJson(IEnumerable items) => JsonConvert.SerializeObject(GetBson(items));
-		public static IDictionary[] GetBson(IEnumerable items, Delegate func = null) {{
-			List<IDictionary> ret = new List<IDictionary>();
-			IEnumerator ie = items.GetEnumerator();
-			while (ie.MoveNext()) {{
-				if (ie.Current == null) ret.Add(null);
-				else if (func == null) ret.Add(ie.Current.GetType().GetMethod(""ToBson"").Invoke(ie.Current, new object[] {{ false }}) as IDictionary);
+public static partial class ExtensionMethods {{
+	public static double Distance(this NpgsqlPoint? that, NpgsqlPoint point) => that?.Distance(point) ?? 0;
+	public static double Distance(this NpgsqlPoint that, NpgsqlPoint point) {{
+		double radLat1 = (double)(that.Y) * Math.PI / 180d;
+		double radLng1 = (double)(that.X) * Math.PI / 180d;
+		double radLat2 = (double)(point.Y) * Math.PI / 180d;
+		double radLng2 = (double)(point.X) * Math.PI / 180d;
+		return 2 * Math.Asin(Math.Sqrt(Math.Pow(Math.Sin((radLat1 - radLat2) / 2), 2) + Math.Cos(radLat1) * Math.Cos(radLat2) * Math.Pow(Math.Sin((radLng1 - radLng2) / 2), 2))) * 6378137;
+	}}
+{1}
+	public static string GetJson(IEnumerable items) => JsonConvert.SerializeObject(GetBson(items));
+	public static IDictionary[] GetBson(IEnumerable items, Delegate func = null) {{
+		List<IDictionary> ret = new List<IDictionary>();
+		IEnumerator ie = items.GetEnumerator();
+		while (ie.MoveNext()) {{
+			if (ie.Current == null) ret.Add(null);
+			else if (func == null) ret.Add(ie.Current.GetType().GetMethod(""ToBson"").Invoke(ie.Current, new object[] {{ false }}) as IDictionary);
+			else {{
+				object obj = func.GetMethodInfo().Invoke(func.Target, new object[] {{ ie.Current }});
+				if (obj is IDictionary) ret.Add(obj as IDictionary);
 				else {{
-					object obj = func.GetMethodInfo().Invoke(func.Target, new object[] {{ ie.Current }});
-					if (obj is IDictionary) ret.Add(obj as IDictionary);
-					else {{
-						Hashtable ht = new Hashtable();
-						PropertyInfo[] pis = obj.GetType().GetProperties();
-						foreach (PropertyInfo pi in pis) ht[pi.Name] = pi.GetValue(obj);
-						ret.Add(ht);
-					}}
+					Hashtable ht = new Hashtable();
+					PropertyInfo[] pis = obj.GetType().GetProperties();
+					foreach (PropertyInfo pi in pis) ht[pi.Name] = pi.GetValue(obj);
+					ret.Add(ht);
 				}}
 			}}
-			return ret.ToArray();
 		}}
+		return ret.ToArray();
 	}}
 }}";
 			#endregion

@@ -1087,11 +1087,11 @@ namespace {0}.Model {{
 				clearSb();
 
 				Model_Build__ExtensionMethods_cs.AppendFormat(@"
-		public static string ToJson(this {0}Info item) => string.Concat(item);
-		public static string ToJson(this {0}Info[] items) => GetJson(items);
-		public static string ToJson(this IEnumerable<{0}Info> items) => GetJson(items);
-		public static IDictionary[] ToBson(this {0}Info[] items, Func<{0}Info, object> func = null) => GetBson(items, func);
-		public static IDictionary[] ToBson(this IEnumerable<{0}Info> items, Func<{0}Info, object> func = null) => GetBson(items, func);
+	public static string ToJson(this {0}Info item) => string.Concat(item);
+	public static string ToJson(this {0}Info[] items) => GetJson(items);
+	public static string ToJson(this IEnumerable<{0}Info> items) => GetJson(items);
+	public static IDictionary[] ToBson(this {0}Info[] items, Func<{0}Info, object> func = null) => GetBson(items, func);
+	public static IDictionary[] ToBson(this IEnumerable<{0}Info> items, Func<{0}Info, object> func = null) => GetBson(items, func);
 ", uClass_Name);
 				#endregion
 
@@ -1872,19 +1872,33 @@ namespace {0}.BLL {{
 		}}", uClass_Name, fkcsBy, csType, col.Name);
 						return;
 					}
-					if (csType == "PostgisGeometry") {
+					if (csType == "NpgsqlPoint?") {
 						sb6.AppendFormat(@"
 		/// <summary>
 		/// 查找地理位置多少米范围内的记录，距离由近到远排序
 		/// </summary>
 		/// <param name=""point"">经纬度</param>
-		/// <param name=""meter"">米</param>
+		/// <param name=""meter"">米(<=0时无限制)</param>
 		/// <returns></returns>
-		public {0}SelectBuild Where{1}ST_dwithin(PostgisPoint point, double meter) {{
-			if (point.SRID == 0) point.SRID = 4326;
-			return this.Where(@""st_dwithin({{0}}::geography, a.""""{3}""""::geography, {{1}})"", new NpgsqlParameter {{ Value = point }}, meter)
-				.OrderBy(@""st_distance({{0}}::geography, a.""""{3}""""::geography)"", new NpgsqlParameter {{ Value = point }});
+		public {0}SelectBuild Where{1}ST_dwithin(NpgsqlPoint point, double meter = 0) {{
+			return this.Where(meter > 0, @""st_dwithin({{0}}::geometry::geography, a.""""{3}""""::geometry::geography, {{1}})"", new NpgsqlParameter {{ NpgsqlDbType = NpgsqlDbType.Point, Value = point }}, meter)
+				.OrderBy(@""{{0}} <-> a.""""{3}"""""", new NpgsqlParameter {{ NpgsqlDbType = NpgsqlDbType.Point, Value = point }});
 		}}", uClass_Name, fkcsBy, csType.Replace("?", ""), col.Name);
+						return;
+					}
+					if (csType == "PostgisGeometry") {
+		//				sb6.AppendFormat(@"
+		///// <summary>
+		///// 查找地理位置多少米范围内的记录，距离由近到远排序
+		///// </summary>
+		///// <param name=""point"">经纬度</param>
+		///// <param name=""meter"">米</param>
+		///// <returns></returns>
+		//public {0}SelectBuild Where{1}ST_dwithin(PostgisPoint point, double meter) {{
+		//	if (point.SRID == 0) point.SRID = 4326;
+		//	return this.Where(@""st_dwithin({{0}}::geography, a.""""{3}""""::geography, {{1}})"", new NpgsqlParameter {{ Value = point }}, meter)
+		//		.OrderBy(@""st_distance({{0}}::geography, a.""""{3}""""::geography)"", new NpgsqlParameter {{ Value = point }});
+		//}}", uClass_Name, fkcsBy, csType.Replace("?", ""), col.Name);
 						return;
 					}
 				});
