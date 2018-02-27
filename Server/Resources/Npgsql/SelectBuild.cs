@@ -24,62 +24,43 @@ namespace Npgsql {
 			values.CopyTo(parms, 0);
 			return base.Where(filter.Substring(4), parms);
 		}
-		public new TLinket Count(out long count) {
-			return base.Count(out count) as TLinket;
-		}
-		public new TLinket Where(string filter, params object[] parms) {
-			return base.Where(true, filter, parms) as TLinket;
-		}
-		public new TLinket Where(bool isadd, string filter, params object[] parms) {
-			return base.Where(isadd, filter, parms) as TLinket;
-		}
-		public new TLinket GroupBy(string groupby) {
-			return base.GroupBy(groupby) as TLinket;
-		}
-		public new TLinket Having(string filter, params object[] parms) {
-			return base.Having(true, filter, parms) as TLinket;
-		}
-		public new TLinket Having(bool isadd, string filter, params object[] parms) {
-			return base.Having(isadd, filter, parms) as TLinket;
-		}
-		public new TLinket Sort(string sort, params object[] parms) {
-			return base.Sort(sort, parms) as TLinket;
-		}
-		public new TLinket OrderBy(string sort, params object[] parms) {
-			return base.Sort(sort, parms) as TLinket;
-		}
-		public new TLinket From<TBLL>() {
-			return base.From<TBLL>() as TLinket;
-		}
-		public new TLinket From<TBLL>(string alias) {
-			return base.From<TBLL>(alias) as TLinket;
-		}
-		public new TLinket InnerJoin<TBLL>(string alias, string on) {
-			return base.InnerJoin<TBLL>(alias, on) as TLinket;
-		}
-		public new TLinket LeftJoin<TBLL>(string alias, string on) {
-			return base.LeftJoin<TBLL>(alias, on) as TLinket;
-		}
-		public new TLinket RightJoin<TBLL>(string alias, string on) {
-			return base.RightJoin<TBLL>(alias, on) as TLinket;
-		}
-		public new TLinket Skip(int skip) {
-			return base.Skip(skip) as TLinket;
-		}
-		public new TLinket Limit(int limit) {
-			return base.Limit(limit) as TLinket;
-		}
-		public new TLinket Take(int limit) {
-			return base.Limit(limit) as TLinket;
-		}
-		public new TLinket Page(int pageIndex, int pageSize) {
-			return base.Page(pageIndex, pageSize) as TLinket;
-		}
+		public new TLinket Count(out long count) => base.Count(out count) as TLinket;
+		public new TLinket Where(string filter, params object[] parms) => base.Where(true, filter, parms) as TLinket;
+		public new TLinket Where(bool isadd, string filter, params object[] parms) => base.Where(isadd, filter, parms) as TLinket;
+		public new TLinket GroupBy(string groupby) => base.GroupBy(groupby) as TLinket;
+		public new TLinket Having(string filter, params object[] parms) => base.Having(true, filter, parms) as TLinket;
+		public new TLinket Having(bool isadd, string filter, params object[] parms) => base.Having(isadd, filter, parms) as TLinket;
+		public new TLinket Sort(string orderby, params object[] parms) => base.Sort(orderby, parms) as TLinket;
+		public new TLinket OrderBy(string orderby, params object[] parms) => base.Sort(orderby, parms) as TLinket;
+		/// <summary>
+		/// 窗口函数原型：@field OVER(PARTITION BY @partitionBy ORDER BY @orderby)
+		/// </summary>
+		/// <param name="field">如：rank()、avg(xx)、sum(xxx)等聚合函数，传null会清除链式累积的over</param>
+		/// <param name="partitionBy">如：表字段 xxx</param>
+		/// <param name="orderby">如：表字段 xxx DESC</param>
+		/// <returns></returns>
+		public new TLinket Over(string field, string partitionBy, string orderby) => base.Over(field, partitionBy, orderby) as TLinket;
+		/// <summary>
+		/// pgsql特性：只保留在给定表达式上计算相等的行集合中的第一行
+		/// </summary>
+		/// <param name="fields">expression [, ...]</param>
+		/// <param name="orderby">DISTINCT ON表达式必须匹配最左边的 ORDER BY表达式</param>
+		/// <returns></returns>
+		public new TLinket DistinctOn(string fields, string orderby = null) => base.DistinctOn(fields, orderby) as TLinket;
+		public new TLinket From<TBLL>() => base.From<TBLL>() as TLinket;
+		public new TLinket From<TBLL>(string alias) => base.From<TBLL>(alias) as TLinket;
+		public new TLinket InnerJoin<TBLL>(string alias, string on) => base.InnerJoin<TBLL>(alias, on) as TLinket;
+		public new TLinket LeftJoin<TBLL>(string alias, string on) => base.LeftJoin<TBLL>(alias, on) as TLinket;
+		public new TLinket RightJoin<TBLL>(string alias, string on) => base.RightJoin<TBLL>(alias, on) as TLinket;
+		public new TLinket Skip(int skip) => base.Skip(skip) as TLinket;
+		public new TLinket Limit(int limit) => base.Limit(limit) as TLinket;
+		public new TLinket Take(int limit) => base.Limit(limit) as TLinket;
+		public new TLinket Page(int pageIndex, int pageSize) => base.Page(pageIndex, pageSize) as TLinket;
 		public SelectBuild(IDAL dal, Executer exec) : base(dal, exec) { }
 	}
 	public class SelectBuild<TReturnInfo> {
 		protected int _limit, _skip;
-		protected string _sort, _field, _table, _join, _where, _groupby, _having;
+		protected string _orderby, _field, _table, _join, _where, _groupby, _having, _distinctOnFields, _distinctOnOrderby, _overField, _overWindow;
 		protected List<NpgsqlParameter> _params = new List<NpgsqlParameter>();
 		protected List<IDAL> _dals = new List<IDAL>();
 		protected Executer _exec;
@@ -104,7 +85,7 @@ namespace Npgsql {
 					try {
 						string[] vs = JsonConvert.DeserializeObject<string[]>(cacheValue);
 						for (int a = 0, skip = objNames.Length + 1; a < vs.Length; a += skip) {
-							TReturnInfo info = (TReturnInfo) parses[0].Invoke(null, new object[] { vs[a] });
+							TReturnInfo info = (TReturnInfo)parses[0].Invoke(null, new object[] { vs[a] });
 							Type type = info.GetType();
 							for (int b = 1; b < parses.Length; b++) {
 								object item = parses[b].Invoke(null, new object[] { vs[a + b] });
@@ -123,22 +104,27 @@ namespace Npgsql {
 			List<object> cacheList = null;
 			if (isCache) cacheList = new List<object>();
 			_exec.ExecuteReader(dr => {
-				int index = -1;
-				TReturnInfo info = (TReturnInfo) _dals[0].GetItem(dr, ref index);
+				int dataIndex = -1;
+				if (!string.IsNullOrEmpty(_distinctOnFields)) ++dataIndex;
+				TReturnInfo info = (TReturnInfo)_dals[0].GetItem(dr, ref dataIndex);
 				Type type = info.GetType();
 				ret.Add(info);
-				if (isCache) cacheList.Add(info.GetType().GetMethod("Stringify").Invoke(info, null));
+				if (isCache) cacheList.Add(type.GetMethod("Stringify").Invoke(info, null));
 				for (int b = 0; b < objNames.Length; b++) {
-					object obj = _dals[b + 1].GetItem(dr, ref index);
-					PropertyInfo prop = info.GetType().GetProperty(objNames[b]);
+					object obj = _dals[b + 1].GetItem(dr, ref dataIndex);
+					PropertyInfo prop = type.GetProperty(objNames[b]);
 					if (prop == null) throw new Exception(string.Concat(type.FullName, " 没有定义属性 ", objNames[b]));
 					prop.SetValue(info, obj, null);
-					if (isCache) cacheList.Add(obj.GetType().GetMethod("Stringify").Invoke(obj, null));
+					if (isCache) cacheList.Add(type.GetMethod("Stringify").Invoke(obj, null));
 				}
+				int dataCount = dr.FieldCount;
+				object[] overValue = new object[dataCount - dataIndex];
+				for (var a = 0; a < overValue.Length; a++) overValue[a] = dr.IsDBNull(++dataIndex) ? null : dr.GetValue(dataIndex);
+				if (overValue.Length > 0) type.GetProperty("OverValue")?.SetValue(info, overValue, null);
 			}, CommandType.Text, sql, _params.ToArray());
 			if (isCache) {
 				string json = JsonConvert.SerializeObject(cacheList);
-				cache_set(cacheKey, json, (int) expire.TotalSeconds);
+				cache_set(cacheKey, json, (int)expire.TotalSeconds);
 			}
 			return ret;
 		}
@@ -151,10 +137,14 @@ namespace Npgsql {
 		}
 		public override string ToString() => this.ToString(null);
 		public string ToString(string field) {
-			if (string.IsNullOrEmpty(_sort) && _skip > 0) this.Sort(_dals[0].Sort);
+			if (string.IsNullOrEmpty(_orderby) && _skip > 0) this.Sort(_dals[0].Sort);
 			string limit = string.Concat(_limit > 0 ? string.Format(" \r\nlimit {0}", _limit) : string.Empty, _skip > 0 ? string.Format(" \r\noffset {0}", _skip) : string.Empty);
 			string where = string.IsNullOrEmpty(_where) ? string.Empty : string.Concat(" \r\nWHERE ", _where.Substring(5));
-			string sql = string.Concat("SELECT ", field ?? _field, _table, _join, where, _sort, limit);
+			string sql = string.Concat("SELECT ",
+				string.IsNullOrEmpty(_distinctOnFields) ? string.Empty : $"DISTINCT ON ({_distinctOnFields}) null as dgsbdo639, {_field}",
+				field ?? _field, _overField, _table, _join, _overWindow, where,
+				string.IsNullOrEmpty(_distinctOnOrderby) ? _orderby : string.Concat(" \r\nORDER BY ", _distinctOnOrderby, ", ", _orderby.Substring(12)),
+				limit);
 			return sql;
 		}
 		/// <summary>
@@ -168,14 +158,19 @@ namespace Npgsql {
 			string where = string.IsNullOrEmpty(_where) ? string.Empty : string.Concat(" \r\nWHERE ", _where.Substring(5));
 			string having = string.IsNullOrEmpty(_groupby) ||
 							string.IsNullOrEmpty(_having) ? string.Empty : string.Concat(" \r\nHAVING ", _having.Substring(5));
-			string sql = string.Concat("SELECT ", this.ParseCondi(fields, parms), _table, _join, where, _groupby, having, _sort, limit);
+			string sql = string.Concat("SELECT ",
+				string.IsNullOrEmpty(_distinctOnFields) ? string.Empty : $"DISTINCT ON ({_distinctOnFields}) null as dgsbdo639, {_field}",
+				this.ParseCondi(fields, parms), _overField, _table, _join, _overWindow, where, _groupby, having,
+				string.IsNullOrEmpty(_distinctOnOrderby) ? _orderby : string.Concat(" \r\nORDER BY ", _distinctOnOrderby, ", ", _orderby.Substring(12)),
+				limit);
 
 			List<T> ret = new List<T>();
 			Type type = typeof(T);
 
 			_exec.ExecuteReader(dr => {
 				int dataIndex = -1;
-				ret.Add((T) this.AggregateReadTuple(type, dr, ref dataIndex));
+				if (!string.IsNullOrEmpty(_distinctOnFields)) ++dataIndex;
+				ret.Add((T)this.AggregateReadTuple(type, dr, ref dataIndex));
 			}, CommandType.Text, sql, _params.ToArray());
 			return ret;
 		}
@@ -196,13 +191,12 @@ namespace Npgsql {
 				ConstructorInfo constructor = type.GetConstructor(types);
 				return constructor.Invoke(parms);
 			}
-			++dataIndex;
-			return dr.IsDBNull(dataIndex) ? null : dr.GetValue(dataIndex);
+			return dr.IsDBNull(++dataIndex) ? null : dr.GetValue(dataIndex);
 		}
 		public long Count() {
 			return this.AggregateScalar<long>("count(1)");
 		}
-		public SelectBuild<TReturnInfo> Count(out long count) {
+		protected SelectBuild<TReturnInfo> Count(out long count) {
 			count = this.Count();
 			return this;
 		}
@@ -216,10 +210,10 @@ namespace Npgsql {
 			_table = string.Concat(" \r\nFROM ", dal.Table, " a");
 			_exec = exec;
 		}
-		public SelectBuild<TReturnInfo> From<TBLL>() {
+		protected SelectBuild<TReturnInfo> From<TBLL>() {
 			return this.From<TBLL>(string.Empty);
 		}
-		public SelectBuild<TReturnInfo> From<TBLL>(string alias) {
+		protected SelectBuild<TReturnInfo> From<TBLL>(string alias) {
 			IDAL dal = this.ConvertTBLL<TBLL>();
 			_table = string.Concat(_table, ", ", dal.Table, " ", alias);
 			return this;
@@ -243,10 +237,10 @@ namespace Npgsql {
 			_join = string.Concat(_join, " \r\n", joinType, " ", dal.Table, " ", alias, " ON ", on);
 			return this;
 		}
-		public SelectBuild<TReturnInfo> Where(string filter, params object[] parms) {
+		protected SelectBuild<TReturnInfo> Where(string filter, params object[] parms) {
 			return this.Where(true, filter, parms);
 		}
-		public SelectBuild<TReturnInfo> Where(bool isadd, string filter, params object[] parms) {
+		protected SelectBuild<TReturnInfo> Where(bool isadd, string filter, params object[] parms) {
 			if (isadd) _where = string.Concat(_where, " AND (", Executer.Addslashes(this.ParseCondi(filter, parms), parms), ")");
 			return this;
 		}
@@ -266,52 +260,72 @@ namespace Npgsql {
 			}
 			return filter;
 		}
-		public SelectBuild<TReturnInfo> GroupBy(string groupby) {
+		protected SelectBuild<TReturnInfo> GroupBy(string groupby) {
 			_groupby = groupby;
 			if (string.IsNullOrEmpty(_groupby)) return this;
 			_groupby = string.Concat(" \r\nGROUP BY ", _groupby);
 			return this;
 		}
-		public SelectBuild<TReturnInfo> Having(string filter, params object[] parms) {
+		protected SelectBuild<TReturnInfo> Having(string filter, params object[] parms) {
 			return this.Having(true, filter, parms);
 		}
-		public SelectBuild<TReturnInfo> Having(bool isadd, string filter, params object[] parms) {
+		protected SelectBuild<TReturnInfo> Having(bool isadd, string filter, params object[] parms) {
 			if (string.IsNullOrEmpty(_groupby)) return this;
 			if (isadd) _having = string.Concat(_having, " AND (", Executer.Addslashes(this.ParseCondi(filter, parms), parms), ")");
 			return this;
 		}
-		public SelectBuild<TReturnInfo> Sort(string sort, params object[] parms) {
-			if (string.IsNullOrEmpty(sort)) _sort = null;
+		protected SelectBuild<TReturnInfo> Sort(string orderby, params object[] parms) {
+			if (string.IsNullOrEmpty(orderby)) _orderby = null;
 			else {
-				if (string.IsNullOrEmpty(_sort)) _sort = string.Concat(" \r\nORDER BY ", this.ParseCondi(sort, parms));
-				else _sort = string.Concat(_sort, ", ", this.ParseCondi(sort, parms));
+				if (string.IsNullOrEmpty(_orderby)) _orderby = string.Concat(" \r\nORDER BY ", this.ParseCondi(orderby, parms));
+				else _orderby = string.Concat(_orderby, ", ", this.ParseCondi(orderby, parms));
 			}
 			return this;
 		}
-		public SelectBuild<TReturnInfo> OrderBy(string sort, params object[] parms) {
-			return this.Sort(sort, parms);
+		protected SelectBuild<TReturnInfo> OrderBy(string orderby, params object[] parms) {
+			return this.Sort(orderby, parms);
 		}
-		public SelectBuild<TReturnInfo> InnerJoin<TBLL>(string alias, string on) {
+		protected SelectBuild<TReturnInfo> Over(string field, string partitionBy, string orderby) {
+			if (string.IsNullOrEmpty(field)) {
+				_overField = _overWindow = string.Empty;
+				return this;
+			}
+			int dgsboverwd = _overWindow?.Length ?? 0;
+			string win = $" \r\nWINDOW dgsboverwd{dgsboverwd} as (";
+			if (!string.IsNullOrEmpty(partitionBy)) win = $"{win}PARTITION BY {partitionBy}";
+			if (!string.IsNullOrEmpty(orderby)) win = $"{win} ORDER BY {orderby}";
+			_overWindow = string.Concat(_overWindow, win, ")");
+			_overField = $", {field} OVER dgsboverwd{dgsboverwd}";
+			return this;
+		}
+		protected SelectBuild<TReturnInfo> DistinctOn(string fields, string orderby = null) {
+			if (string.IsNullOrEmpty(fields)) return this;
+			if (string.IsNullOrEmpty(orderby)) orderby = fields;
+			_distinctOnFields = fields;
+			_distinctOnOrderby = orderby;
+			return this;
+		}
+		protected SelectBuild<TReturnInfo> InnerJoin<TBLL>(string alias, string on) {
 			return this.Join<TBLL>(alias, on, "INNER JOIN");
 		}
-		public SelectBuild<TReturnInfo> LeftJoin<TBLL>(string alias, string on) {
+		protected SelectBuild<TReturnInfo> LeftJoin<TBLL>(string alias, string on) {
 			return this.Join<TBLL>(alias, on, "LEFT JOIN");
 		}
-		public SelectBuild<TReturnInfo> RightJoin<TBLL>(string alias, string on) {
+		protected SelectBuild<TReturnInfo> RightJoin<TBLL>(string alias, string on) {
 			return this.Join<TBLL>(alias, on, "RIGHT JOIN");
 		}
-		public SelectBuild<TReturnInfo> Skip(int skip) {
+		protected SelectBuild<TReturnInfo> Skip(int skip) {
 			_skip = skip;
 			return this;
 		}
-		public SelectBuild<TReturnInfo> Limit(int limit) {
+		protected SelectBuild<TReturnInfo> Limit(int limit) {
 			_limit = limit;
 			return this;
 		}
-		public SelectBuild<TReturnInfo> Take(int limit) {
+		protected SelectBuild<TReturnInfo> Take(int limit) {
 			return this.Limit(limit);
 		}
-		public SelectBuild<TReturnInfo> Page(int pageIndex, int pageSize) {
+		protected SelectBuild<TReturnInfo> Page(int pageIndex, int pageSize) {
 			return this.Skip(Math.Max(0, pageIndex - 1) * pageSize).Limit(pageSize);
 		}
 	}
