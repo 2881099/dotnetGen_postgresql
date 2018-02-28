@@ -118,7 +118,7 @@ namespace Npgsql {
 					if (isCache) cacheList.Add(type.GetMethod("Stringify").Invoke(obj, null));
 				}
 				int dataCount = dr.FieldCount;
-				object[] overValue = new object[dataCount - dataIndex];
+				object[] overValue = new object[dataCount - dataIndex - 1];
 				for (var a = 0; a < overValue.Length; a++) overValue[a] = dr.IsDBNull(++dataIndex) ? null : dr.GetValue(dataIndex);
 				if (overValue.Length > 0) type.GetProperty("OverValue")?.SetValue(info, overValue, null);
 			}, CommandType.Text, sql, _params.ToArray());
