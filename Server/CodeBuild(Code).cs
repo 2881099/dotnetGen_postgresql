@@ -509,7 +509,11 @@ namespace {0}.Model {{
 			item.{0} = newitem.{0};", UFString(columnInfo.Name));
 					if (columnInfo.IsIdentity) {
 						//CsParamNoType2 += "0, ";
-					} else {
+					}
+					else if (columnInfo.IsPrimaryKey && columnInfo.CsType == "Guid?") {
+
+					}
+					else {
 						CsParam2 += columnInfo.CsType + " " + CodeBuild.UFString(columnInfo.Name) + ", ";
 						CsParamNoType2 += string.Format("\r\n				{0} = {0}, ", CodeBuild.UFString(columnInfo.Name));
 					}
@@ -1013,7 +1017,7 @@ namespace {0}.Model {{
 					string newguid = "";
 					foreach (ColumnInfo guidpk in table.PrimaryKeys)
 						if (guidpk.CsType == "Guid?") newguid += string.Format(@"
-			this.{0} = Guid.NewGuid();", UFString(guidpk.Name));
+			this.{0} = BLL.RedisHelper.NewMongodbId();", UFString(guidpk.Name));
 
 					if (table.Columns.Count > table.PrimaryKeys.Count || !string.IsNullOrEmpty(newguid)) {
 						ColumnInfo colUpdateTime = table.Columns.Find(delegate (ColumnInfo fcc) { return fcc.Name.ToLower() == "update_time" && fcc.CsType == "DateTime?"; });
@@ -1023,7 +1027,7 @@ namespace {0}.Model {{
 			if (this.{4} != null) {{
 				BLL.{1}.Update(this);
 				return this;
-			}}{5}{3}
+			}}{3}
 			return BLL.{1}.Insert(this);
 		}}", solutionName, uClass_Name, colUpdateTime != null ? @"
 			this." + UFString(colUpdateTime.Name) + " = DateTime.Now;" : "", colCreateTime != null ? @"
@@ -1567,8 +1571,11 @@ namespace {0}.BLL {{
 					var redisRemove = sb4.ToString();
 					if (!string.IsNullOrEmpty(redisRemove)) redisRemove = string.Concat(@"
 			RedisHelper.Remove(", redisRemove.Substring(0, redisRemove.Length - 2), ");");
+					string cspk2GuidSetValue = "";
+					foreach (ColumnInfo cspk2 in table.PrimaryKeys)
+						if (cspk2.CsType == "Guid?") cspk2GuidSetValue += string.Format("\r\n			if (item.{0} == null) item.{0} = RedisHelper.NewMongodbId();", CodeBuild.UFString(cspk2.Name));
 					sb1.AppendFormat(@"
-		public static {0}Info Insert({0}Info item) {{
+		public static {0}Info Insert({0}Info item) {{{3}
 			item = dal.Insert(item);
 			if (itemCacheTimeout > 0) RemoveCache(item);
 			return item;
@@ -1578,7 +1585,7 @@ namespace {0}.BLL {{
 		}}
 		#endregion
 {1}
-", uClass_Name, sb3.ToString(), redisRemove);
+", uClass_Name, sb3.ToString(), redisRemove, cspk2GuidSetValue);
 					#endregion
 				}
 
@@ -1864,11 +1871,15 @@ namespace {0}.BLL {{
 							sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}(params {2}[] {1}) {{
 			return this.Where1Or(@""a.""""{3}"""" = {{0}}"", {1});
+		}}
+		public {0}SelectBuild Where{1}Regex(string pattern, bool isNotMatch = false, bool ignoreCase = true) {{
+			var pgOpt = isNotMatch ? (ignoreCase ? ""!~*"" : ""!~"") : (ignoreCase ? ""~*"" : ""~"");
+			return this.Where($@""a.""""{3}"""" {{pgOpt}} {{{{0}}}}"", pattern);
 		}}", uClass_Name, fkcsBy, csType, col.Name);
 						sb6.AppendFormat(@"
-		public {0}SelectBuild Where{1}Like(params {2}[] {1}) {{
-			if ({1} == null || {1}.Where(a => !string.IsNullOrEmpty(a)).Any() == false) return this;
-			return this.Where1Or(@""a.""""{3}"""" ILIKE {{0}}"", {1}.Select(a => ""%"" + a + ""%"").ToArray());
+		public {0}SelectBuild Where{1}Like(string pattern, bool isNotLike = false, bool ignoreCase = true) {{
+			var pgOpt = isNotLike ? (ignoreCase ? ""ILIKE"" : ""LIKE"") : (ignoreCase ? ""NOT ILIKE"" : ""NOT LIKE"");
+			return this.Where($@""a.""""{3}"""" {{pgOpt}} {{{{0}}}}"", pattern);
 		}}", uClass_Name, fkcsBy, csType, col.Name);
 						return;
 					}
