@@ -1629,7 +1629,7 @@ namespace {0}.BLL {{
 		public static {0}SelectBuild SelectBy{1}({2}) => Select.Where{1}({3});", uClass_Name, fkcsBy, fkcsTypeParms, fkcsParms);
 						sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}({2}) {{
-			return base.Where(@""{4}"", {3}) as {0}SelectBuild;
+			return base.Where(@""{4}"", {3});
 		}}", uClass_Name, fkcsBy, fkcsTypeParms, fkcsParms, fkcsFilter, solutionName);
 					} else if (fk.Columns.Count == 1/* && fk.Columns[0].IsPrimaryKey == false*/) {
 						string csType = fk.Columns[0].CsType;
@@ -1716,7 +1716,7 @@ namespace {0}.BLL {{
 			if (subCondition != null) subCondition(subConditionSelect);
 			var subConditionSql = subConditionSelect.ToString(@""""""{6}"""""").Replace(""\"" a \r\nWHERE ("", ""\"" WHERE ("");
 			if (subCondition != null) subConditionSql = subConditionSql.Replace(""a.\"""", ""\""{11}\"".\""{12}\"".\"""");
-			return base.Where($""EXISTS({{subConditionSql}})"") as {0}SelectBuild;
+			return base.Where($""EXISTS({{subConditionSql}})"");
 		}}", uClass_Name, fkcsBy, orgInfo, civ, string.Empty, CodeBuild.UFString(t2.ClassName), _f6, _f7, _f8, _f9, LFString(orgInfo), t2.Owner, t2.Name);
 				});
 
@@ -1789,11 +1789,11 @@ namespace {0}.BLL {{
 		}}", uClass_Name, fkcsBy, col.IsPrimaryKey ? csType.Replace("?", "") : csType, col.Name);
 						sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}Range({2} begin) {{
-			return base.Where(@""a.""""{3}"""" >= {{0}}"", begin) as {0}SelectBuild;
+			return base.Where(@""a.""""{3}"""" >= {{0}}"", begin);
 		}}
 		public {0}SelectBuild Where{1}Range({2} begin, {2} end) {{
 			if (end == null) return Where{1}Range(begin);
-			return base.Where(@""a.""""{3}"""" between {{0}} and {{1}}"", begin, end) as {0}SelectBuild;
+			return base.Where(@""a.""""{3}"""" between {{0}} and {{1}}"", begin, end);
 		}}", uClass_Name, fkcsBy, csType, col.Name);
 						return;
 					}
@@ -1802,15 +1802,15 @@ namespace {0}.BLL {{
 						if (col.IsPrimaryKey)
 							sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}({2} {1}) {{
-			return base.Where(@""a.""""{3}"""" = {{0}}"", {1}) as {0}SelectBuild;
+			return base.Where(@""a.""""{3}"""" = {{0}}"", {1});
 		}}", uClass_Name, fkcsBy, csType, col.Name);
 						sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}Range({2} begin) {{
-			return base.Where(@""a.""""{3}"""" >= {{0}}"", begin) as {0}SelectBuild;
+			return base.Where(@""a.""""{3}"""" >= {{0}}"", begin);
 		}}
 		public {0}SelectBuild Where{1}Range({2} begin, {2} end) {{
 			if (end == null) return Where{1}Range(begin);
-			return base.Where(@""a.""""{3}"""" between {{0}} and {{1}}"", begin, end) as {0}SelectBuild;
+			return base.Where(@""a.""""{3}"""" between {{0}} and {{1}}"", begin, end);
 		}}", uClass_Name, fkcsBy, csType, col.Name);
 						return;
 					}
@@ -1899,9 +1899,6 @@ namespace {0}.BLL {{
 				sb1.AppendFormat(@"
 	}}
 	public partial class {0}SelectBuild : SelectBuild<{0}Info, {0}SelectBuild> {{{2}
-		protected new {0}SelectBuild Where1Or(string filterFormat, Array values) {{
-			return base.Where1Or(filterFormat, values) as {0}SelectBuild;
-		}}
 		public {0}SelectBuild(IDAL dal) : base(dal, PSqlHelper.Instance) {{ }}
 	}}
 }}", uClass_Name, solutionName, sb6.ToString());
