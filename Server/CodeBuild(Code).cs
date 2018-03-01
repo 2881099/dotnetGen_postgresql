@@ -1642,8 +1642,9 @@ namespace {0}.BLL {{
 		public {0}SelectBuild Where{1}(params {2}[] {1}) {{
 			return this.Where1Or(@""a.""""{3}"""" = {{0}}"", {1});
 		}}
-		public {0}SelectBuild Where{1}({4}SelectBuild select) {{
-			return this.Where($@""a.""""{3}"""" IN ({{select.ToString(@""""""{5}"""""")}})"");
+		public {0}SelectBuild Where{1}({4}SelectBuild select, bool isNotIn = false) {{
+			var opt = isNotIn ? ""NOT IN"" : ""IN"";
+			return this.Where($@""a.""""{3}"""" {{opt}} ({{select.ToString(@""""""{5}"""""")}})"");
 		}}", uClass_Name, fkcsBy, csType, fk.Columns[0].Name, UFString(fk.ReferencedTable.ClassName), fk.ReferencedColumns[0].Name);
 					}
 				}
@@ -1854,13 +1855,13 @@ namespace {0}.BLL {{
 			return this.Where1Or(@""a.""""{3}"""" = {{0}}"", {1});
 		}}
 		public {0}SelectBuild Where{1}Regex(string pattern, bool isNotMatch = false, bool ignoreCase = true) {{
-			var pgOpt = isNotMatch ? (ignoreCase ? ""!~*"" : ""!~"") : (ignoreCase ? ""~*"" : ""~"");
-			return this.Where($@""a.""""{3}"""" {{pgOpt}} {{{{0}}}}"", pattern);
+			var opt = isNotMatch ? (ignoreCase ? ""!~*"" : ""!~"") : (ignoreCase ? ""~*"" : ""~"");
+			return this.Where($@""a.""""{3}"""" {{opt}} {{{{0}}}}"", pattern);
 		}}", uClass_Name, fkcsBy, csType, col.Name);
 						sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}Like(string pattern, bool isNotLike = false, bool ignoreCase = true) {{
-			var pgOpt = isNotLike ? (ignoreCase ? ""ILIKE"" : ""LIKE"") : (ignoreCase ? ""NOT ILIKE"" : ""NOT LIKE"");
-			return this.Where($@""a.""""{3}"""" {{pgOpt}} {{{{0}}}}"", pattern);
+			var opt = isNotLike ? (ignoreCase ? ""ILIKE"" : ""LIKE"") : (ignoreCase ? ""NOT ILIKE"" : ""NOT LIKE"");
+			return this.Where($@""a.""""{3}"""" {{opt}} {{{{0}}}}"", pattern);
 		}}", uClass_Name, fkcsBy, csType, col.Name);
 						return;
 					}
