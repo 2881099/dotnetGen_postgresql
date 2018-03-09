@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Text.RegularExpressions;
-using Microsoft.Extensions.Logging;
 
 namespace Npgsql {
 	/// <summary>
@@ -13,7 +12,7 @@ namespace Npgsql {
 		public int MaxPoolSize = 32;
 		public List<Connection2> AllConnections = new List<Connection2>();
 		public Queue<Connection2> FreeConnections = new Queue<Connection2>();
-		public Queue<ManualResetEvent> GetConnectionQueue = new Queue<ManualResetEvent>();
+		public Queue<ManualResetEventSlim> GetConnectionQueue = new Queue<ManualResetEventSlim>();
 		private static object _lock = new object();
 		private static object _lock_GetConnectionQueue = new object();
 		private string _connectionString;
@@ -51,12 +50,12 @@ namespace Npgsql {
 				}
 			}
 			if (conn == null) {
-				ManualResetEvent wait = new ManualResetEvent(false);
+				ManualResetEventSlim wait = new ManualResetEventSlim(false);
 				lock (_lock_GetConnectionQueue)
 					GetConnectionQueue.Enqueue(wait);
-				if (wait.WaitOne(TimeSpan.FromSeconds(10)))
+				if (wait.Wait(TimeSpan.FromSeconds(10)))
 					return GetConnection();
-				return null;
+				throw new Exception("Npgsql.ConnectionPool.GetConnection 连接池获取超时（10秒）");
 			}
 			conn.ThreadId = Thread.CurrentThread.ManagedThreadId;
 			conn.LastActive = DateTime.Now;
@@ -70,7 +69,7 @@ namespace Npgsql {
 				FreeConnections.Enqueue(conn);
 
 			if (GetConnectionQueue.Count > 0) {
-				ManualResetEvent wait = null;
+				ManualResetEventSlim wait = null;
 				lock (_lock_GetConnectionQueue)
 					if (GetConnectionQueue.Count > 0)
 						wait = GetConnectionQueue.Dequeue();

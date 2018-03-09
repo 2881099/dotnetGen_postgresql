@@ -95,6 +95,7 @@ EndGlobal
  @"using System;
 using System.Collections;
 using System.Data;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
@@ -327,6 +328,7 @@ namespace {0}.BLL {{
 			#region 内容太长已被收起
  @"using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 
@@ -1727,10 +1729,10 @@ namespace {0}.Module.Admin.Controllers {{
 		public {1}Controller(ILogger<{1}Controller> logger) : base(logger) {{ }}
 
 		[HttpGet]
-		public ActionResult List([FromServices]IConfigurationRoot cfg, {12}[FromQuery] int limit = 20, [FromQuery] int page = 1) {{
+		async public Task<ActionResult> List([FromServices]IConfigurationRoot cfg, {12}[FromQuery] int limit = 20, [FromQuery] int page = 1) {{
 			var select = {1}.Select{8};{9}
 			long count;
-			var items = select.Count(out count){14}.Skip((page - 1) * limit).Limit(limit).ToList();
+			var items = await select.Count(out count){14}.Page(page, limit).ToListAsync();
 			ViewBag.items = items;
 			ViewBag.count = count;
 			return View();
@@ -1741,8 +1743,8 @@ namespace {0}.Module.Admin.Controllers {{
 			return View();
 		}}
 		[HttpGet(@""edit"")]
-		public ActionResult Edit({4}) {{
-			{1}Info item = {1}.GetItem({5});
+		async public Task<ActionResult> Edit({4}) {{
+			{1}Info item = await {1}.GetItemAsync({5});
 			if (item == null) return APIReturn.记录不存在_或者没有权限;
 			ViewBag.item = item;
 			return View();
@@ -1751,17 +1753,17 @@ namespace {0}.Module.Admin.Controllers {{
 		/***************************************** POST *****************************************/
 		[HttpPost(@""add"")]
 		[ValidateAntiForgeryToken]
-		public APIReturn _Add({10}) {{
+		async public Task<APIReturn> _Add({10}) {{
 			{1}Info item = new {1}Info();{13}{7}
-			item = {1}.Insert(item);{16}
+			item = await {1}.InsertAsync(item);{16}
 			return APIReturn.成功.SetData(""item"", item.ToBson());
 		}}
 		[HttpPost(@""edit"")]
 		[ValidateAntiForgeryToken]
-		public APIReturn _Edit({4}{11}) {{
-			{1}Info item = {1}.GetItem({5});
+		async public Task<APIReturn> _Edit({4}{11}) {{
+			{1}Info item = await {1}.GetItemAsync({5});
 			if (item == null) return APIReturn.记录不存在_或者没有权限;{6}{7}
-			int affrows = {1}.Update(item);{17}
+			int affrows = await {1}.UpdateAsync(item);{17}
 			if (affrows > 0) return APIReturn.成功.SetMessage($""更新成功，影响行数：{{affrows}}"");
 			return APIReturn.失败;
 		}}
@@ -2032,7 +2034,7 @@ namespace {0}.Module.Admin.Controllers {{
 		public {1}Controller(ILogger<{1}Controller> logger) : base(logger) {{ }}
 
 		[HttpGet]
-		public ActionResult List([FromServices]IConfigurationRoot cfg) {{
+		public APIReturn List([FromServices]IConfigurationRoot cfg) {{
 			return APIReturn.成功;
 		}}
 	}}

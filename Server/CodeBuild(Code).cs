@@ -509,6 +509,8 @@ namespace {0}.Model {{
 			item.{0} = newitem.{0};", UFString(columnInfo.Name));
 					if (columnInfo.IsIdentity) {
 						//CsParamNoType2 += "0, ";
+					} else if (columnInfo.IsPrimaryKey && columnInfo.CsType == "Guid?" && table.PrimaryKeys.Count == 1) {
+
 					} else {
 						CsParam2 += columnInfo.CsType + " " + CodeBuild.UFString(columnInfo.Name) + ", ";
 						CsParamNoType2 += string.Format("\r\n				{0} = {0}, ", CodeBuild.UFString(columnInfo.Name));
@@ -1013,7 +1015,7 @@ namespace {0}.Model {{
 					string newguid = "";
 					foreach (ColumnInfo guidpk in table.PrimaryKeys)
 						if (guidpk.CsType == "Guid?") newguid += string.Format(@"
-			this.{0} = Guid.NewGuid();", UFString(guidpk.Name));
+			this.{0} = BLL.RedisHelper.NewMongodbId();", UFString(guidpk.Name));
 
 					if (table.Columns.Count > table.PrimaryKeys.Count || !string.IsNullOrEmpty(newguid)) {
 						ColumnInfo colUpdateTime = table.Columns.Find(delegate (ColumnInfo fcc) { return fcc.Name.ToLower() == "update_time" && fcc.CsType == "DateTime?"; });
@@ -1187,22 +1189,22 @@ namespace {0}.DAL {{
 				sb1.AppendFormat(@"
 			return item;
 		}}
-		private CopyItemAllField({0}Info item, {0}Info newitem) {{{1}
+		private void CopyItemAllField({0}Info item, {0}Info newitem) {{{1}
 		}}", uClass_Name, csItemAllFieldCopy);
 				sb1.Append(sb4.ToString());
 				sb1.AppendFormat(@"
 		#endregion", uClass_Name, table.Columns.Count + 1);
 
 				string dal_async_code = string.Format(@"
-		public {0}Info GetItemAsync(NpgsqlDataReader dr) {{
+		async public Task<{0}Info> GetItemAsync(NpgsqlDataReader dr) {{
 			var read = await GetItemAsync(dr, -1);
 			return read.result as {0}Info;
 		}}
-		public Task<(object result, int dataIndex)> GetItemAsync(NpgsqlDataReader dr, int dataIndex) {{
+		async public Task<(object result, int dataIndex)> GetItemAsync(NpgsqlDataReader dr, int dataIndex) {{
 			{0}Info item = new {0}Info();", uClass_Name);
 				foreach (ColumnInfo columnInfo in table.Columns) {
 					dal_async_code += string.Format(@"
-			if (!await dr.IsDBNullAsync(++dataIndex)) item.{0} = {1};", (columnInfo.CsType == "JToken" ? "_" : "") + CodeBuild.UFString(columnInfo.Name), CodeBuild.GetDataReaderMethod(columnInfo.Type, columnInfo.CsType).Replace("dr.GetFieldValue", "dr.GetFieldValueAsync"));
+			if (!await dr.IsDBNullAsync(++dataIndex)) item.{0} = {1};", (columnInfo.CsType == "JToken" ? "_" : "") + CodeBuild.UFString(columnInfo.Name), CodeBuild.GetDataReaderMethodAsync(columnInfo.Type, columnInfo.CsType));
 					if (columnInfo.IsPrimaryKey)
 						dal_async_code += string.Format(@" if (item.{0} == null) return (null, dataIndex);", (columnInfo.CsType == "JToken" ? "_" : "") + CodeBuild.UFString(columnInfo.Name));
 				}
@@ -1371,8 +1373,8 @@ namespace {0}.DAL {{
 					sb1.AppendFormat(@"
 {1}
 
-		public int Update({0}Info item) {{
-			return new SqlUpdateBuild(null, item.{7}){8}.ExecuteNonQuery();
+		public SqlUpdateBuild Update({0}Info item) {{
+			return new SqlUpdateBuild(null, item.{7}){8};
 		}}
 		#region class SqlUpdateBuild
 		public partial class SqlUpdateBuild {{
@@ -1407,9 +1409,9 @@ namespace {0}.DAL {{
 				string sql = this.ToString();
 				if (string.IsNullOrEmpty(sql)) return 0;
 				if (_item == null) return await PSqlHelper.ExecuteNonQueryAsync(sql, _parameters.ToArray());
-				AppInfo newitem = null;
+				{0}Info newitem = null;
 				await PSqlHelper.ExecuteReaderAsync(async dr => {{
-					newitem = await BLL.App.dal.GetItemAsync(dr);
+					newitem = await BLL.{0}.dal.GetItemAsync(dr);
 				}}, sql + TSQL.Returning, _parameters.ToArray());
 				if (newitem == null) return 0;
 				while (_setQs.Count > 0) _setQs.Dequeue()(newitem);
@@ -1439,9 +1441,11 @@ namespace {0}.DAL {{
 		public {0}Info Insert({0}Info item) {{{10}
 		}}
 {2}
+		#region async{11}
+		#endregion
 	}}
 }}", uClass_Name, sb2.ToString(), sb3.ToString(), pkCsParam.Replace("?", ""), pkSqlParamFormat, pkCsParamNoType, sb5.ToString(),
-	pkCsParamNoTypeByval.Replace(", ", ", item."), sb6.ToString(), solutionName, dal_insert_code);
+	pkCsParamNoTypeByval.Replace(", ", ", item."), sb6.ToString(), solutionName, dal_insert_code, dal_async_code);
 					#endregion
 				} else {
 					sb1.AppendFormat(@"
@@ -1594,7 +1598,7 @@ namespace {0}.BLL {{
 						sb1.AppendFormat(@"
 		public static int Update({1}Info item) {{
 			if (itemCacheTimeout > 0) RemoveCache(item);
-			return dal.Update(item);
+			return dal.Update(item).ExecuteNonQuery();
 		}}
 		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy({2}) {{
 			return UpdateDiy(null, {3});
@@ -1618,7 +1622,7 @@ namespace {0}.BLL {{
 						sb1.AppendFormat(@"
 		public static int Update({1}Info item) {{
 			if (itemCacheTimeout > 0) RemoveCache(item);
-			return dal.Update(item)ExecuteNonQuery();
+			return dal.Update(item).ExecuteNonQuery();
 		}}
 		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy({2}) {{
 			return UpdateDiy(null, {3});
@@ -1668,8 +1672,11 @@ namespace {0}.BLL {{
 					var redisRemove = sb4.ToString();
 					if (!string.IsNullOrEmpty(redisRemove)) redisRemove = string.Concat(@"
 			RedisHelper.Remove(", redisRemove.Substring(0, redisRemove.Length - 2), ");");
+					string cspk2GuidSetValue = "";
+					foreach (ColumnInfo cspk2 in table.PrimaryKeys)
+						if (cspk2.CsType == "Guid?") cspk2GuidSetValue += string.Format("\r\n			if (item.{0} == null) item.{0} = RedisHelper.NewMongodbId();", CodeBuild.UFString(cspk2.Name));
 					sb1.AppendFormat(@"
-		public static {0}Info Insert({0}Info item) {{
+		public static {0}Info Insert({0}Info item) {{{3}
 			item = dal.Insert(item);
 			if (itemCacheTimeout > 0) RemoveCache(item);
 			return item;
@@ -1679,30 +1686,26 @@ namespace {0}.BLL {{
 		}}
 		#endregion
 {1}
-", uClass_Name, sb3.ToString(), redisRemove);
-
-					sb1.AppendFormat(@"
-		async public static Task<{0}Info> InsertAsync({0}Info item) {{
-			item = dal.Insert(item);
-			if (itemCacheTimeout > 0) RemoveCache(item);
+", uClass_Name, sb3.ToString(), redisRemove, cspk2GuidSetValue);
+					bll_async_code += string.Format(@"
+		async public static Task<{0}Info> InsertAsync({0}Info item) {{{3}
+			item = await dal.InsertAsync(item);
+			if (itemCacheTimeout > 0) await RemoveCacheAsync(item);
 			return item;
 		}}
-		private static void RemoveCache({0}Info item) {{
+		async private static Task RemoveCacheAsync({0}Info item) {{
 			if (item == null) return;{2}
 		}}
-		#endregion
-{1}
-", uClass_Name, sb3.ToString(), redisRemove);
+", uClass_Name, "", redisRemove.Replace("RedisHelper.Remove", "await RedisHelper.RemoveAsync"), cspk2GuidSetValue);
 					#endregion
 				}
 
 				sb1.AppendFormat(@"
-		public static List<{0}Info> GetItems() {{
-			return Select.ToList();
-		}}
-		public static {0}SelectBuild Select {{
-			get {{ return new {0}SelectBuild(dal); }}
-		}}", uClass_Name, solutionName);
+		public static List<{0}Info> GetItems() => Select.ToList();
+		public static {0}SelectBuild Select => new {0}SelectBuild(dal);
+		public static {0}SelectBuild SelectAs(string alias = ""a"") => Select.As(alias);", uClass_Name, solutionName);
+				bll_async_code += string.Format(@"
+		public static Task<List<{0}Info>> GetItemsAsync() => Select.ToListAsync();", uClass_Name, solutionName);
 
 				Dictionary<string, bool> byItems = new Dictionary<string, bool>();
 				foreach (ForeignKeyInfo fk in table.ForeignKeys) {
@@ -1734,15 +1737,13 @@ namespace {0}.BLL {{
 					if (fk.Columns.Count > 1) {
 						sb1.AppendFormat(
 		@"
-		public static List<{0}Info> GetItemsBy{1}({2}) {{
-			return Select.Where{1}({3}).ToList();
-		}}
-		public static List<{0}Info> GetItemsBy{1}({2}, int limit) {{
-			return Select.Where{1}({3}).Limit(limit).ToList();
-		}}
-		public static {0}SelectBuild SelectBy{1}({2}) {{
-			return Select.Where{1}({3});
-		}}", uClass_Name, fkcsBy, fkcsTypeParms, fkcsParms);
+		public static List<{0}Info> GetItemsBy{1}({2}) => Select.Where{1}({3}).ToList();
+		public static List<{0}Info> GetItemsBy{1}({2}, int limit) => Select.Where{1}({3}).Limit(limit).ToList();
+		public static {0}SelectBuild SelectBy{1}({2}) => Select.Where{1}({3});", uClass_Name, fkcsBy, fkcsTypeParms, fkcsParms);
+						bll_async_code += string.Format(
+		@"
+		public static Task<List<{0}Info>> GetItemsBy{1}Async({2}) => Select.Where{1}({3}).ToListAsync();
+		public static Task<List<{0}Info>> GetItemsBy{1}Async({2}, int limit) => Select.Where{1}({3}).Limit(limit).ToListAsync();", uClass_Name, fkcsBy, fkcsTypeParms, fkcsParms);
 						sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}({2}) {{
 			return base.Where(@""{4}"", {3}) as {0}SelectBuild;
@@ -1751,21 +1752,20 @@ namespace {0}.BLL {{
 						string csType = fk.Columns[0].CsType;
 						sb1.AppendFormat(
 		@"
-		public static List<{0}Info> GetItemsBy{1}(params {2}[] {1}) {{
-			return Select.Where{1}({1}).ToList();
-		}}
-		public static List<{0}Info> GetItemsBy{1}({2}[] {1}, int limit) {{
-			return Select.Where{1}({1}).Limit(limit).ToList();
-		}}
-		public static {0}SelectBuild SelectBy{1}(params {2}[] {1}) {{
-			return Select.Where{1}({1});
-		}}", uClass_Name, fkcsBy, csType);
+		public static List<{0}Info> GetItemsBy{1}(params {2}[] {1}) => Select.Where{1}({1}).ToList();
+		public static List<{0}Info> GetItemsBy{1}({2}[] {1}, int limit) => Select.Where{1}({1}).Limit(limit).ToList();
+		public static {0}SelectBuild SelectBy{1}(params {2}[] {1}) => Select.Where{1}({1});", uClass_Name, fkcsBy, csType);
+						bll_async_code += string.Format(
+		@"
+		public static Task<List<{0}Info>> GetItemsBy{1}Async(params {2}[] {1}) => Select.Where{1}({1}).ToListAsync();
+		public static Task<List<{0}Info>> GetItemsBy{1}Async({2}[] {1}, int limit) => Select.Where{1}({1}).Limit(limit).ToListAsync();", uClass_Name, fkcsBy, csType);
 						sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}(params {2}[] {1}) {{
 			return this.Where1Or(@""a.""""{3}"""" = {{0}}"", {1});
 		}}
-		public {0}SelectBuild Where{1}({4}SelectBuild select) {{
-			return this.Where($@""a.""""{3}"""" IN ({{select.ToString(@""""""{5}"""""")}})"");
+		public {0}SelectBuild Where{1}({4}SelectBuild select, bool isNotIn = false) {{
+			var opt = isNotIn ? ""NOT IN"" : ""IN"";
+			return this.Where($@""a.""""{3}"""" {{opt}} ({{select.ToString(@""""""{5}"""""")}})"");
 		}}", uClass_Name, fkcsBy, csType, fk.Columns[0].Name, UFString(fk.ReferencedTable.ClassName), fk.ReferencedColumns[0].Name);
 					}
 				}
@@ -1810,12 +1810,8 @@ namespace {0}.BLL {{
 
 					string civ = string.Format(GetCSTypeValue(fk2[0].ReferencedTable.PrimaryKeys[0].Type), CodeBuild.UFString(fk2[0].ReferencedTable.PrimaryKeys[0].Name));
 					sb1.AppendFormat(@"
-		public static {0}SelectBuild SelectBy{1}(params {2}Info[] {5}s) {{
-			return Select.Where{1}({5}s);
-		}}
-		public static {0}SelectBuild SelectBy{1}_{4}(params {3}[] {5}_ids) {{
-			return Select.Where{1}_{4}({5}_ids);
-		}}", uClass_Name, fkcsBy, orgInfo, fk2[0].ReferencedTable.PrimaryKeys[0].CsType.Replace("?", ""), table.PrimaryKeys[0].Name, LFString(orgInfo));
+		public static {0}SelectBuild SelectBy{1}(params {2}Info[] {5}s) => Select.Where{1}({5}s);
+		public static {0}SelectBuild SelectBy{1}_{4}(params {3}[] {5}_ids) => Select.Where{1}_{4}({5}_ids);", uClass_Name, fkcsBy, orgInfo, fk2[0].ReferencedTable.PrimaryKeys[0].CsType.Replace("?", ""), table.PrimaryKeys[0].Name, LFString(orgInfo));
 
 					string _f6 = fk.Columns[0].Name;
 					string _f7 = fk.ReferencedTable.PrimaryKeys[0].Name;
@@ -1978,11 +1974,15 @@ namespace {0}.BLL {{
 							sb6.AppendFormat(@"
 		public {0}SelectBuild Where{1}(params {2}[] {1}) {{
 			return this.Where1Or(@""a.""""{3}"""" = {{0}}"", {1});
+		}}
+		public {0}SelectBuild Where{1}Regex(string pattern, bool isNotMatch = false, bool ignoreCase = true) {{
+			var opt = isNotMatch ? (ignoreCase ? ""!~*"" : ""!~"") : (ignoreCase ? ""~*"" : ""~"");
+			return this.Where($@""a.""""{3}"""" {{opt}} {{{{0}}}}"", pattern);
 		}}", uClass_Name, fkcsBy, csType, col.Name);
 						sb6.AppendFormat(@"
-		public {0}SelectBuild Where{1}Like(params {2}[] {1}) {{
-			if ({1} == null || {1}.Where(a => !string.IsNullOrEmpty(a)).Any() == false) return this;
-			return this.Where1Or(@""a.""""{3}"""" ILIKE {{0}}"", {1}.Select(a => ""%"" + a + ""%"").ToArray());
+		public {0}SelectBuild Where{1}Like(string pattern, bool isNotLike = false, bool ignoreCase = true) {{
+			var opt = isNotLike ? (ignoreCase ? ""ILIKE"" : ""LIKE"") : (ignoreCase ? ""NOT ILIKE"" : ""NOT LIKE"");
+			return this.Where($@""a.""""{3}"""" {{opt}} {{{{0}}}}"", pattern);
 		}}", uClass_Name, fkcsBy, csType, col.Name);
 						return;
 					}
@@ -2018,6 +2018,9 @@ namespace {0}.BLL {{
 				});
 
 				sb1.AppendFormat(@"
+
+		#region async{3}
+		#endregion
 	}}
 	public partial class {0}SelectBuild : SelectBuild<{0}Info, {0}SelectBuild> {{{2}
 		protected new {0}SelectBuild Where1Or(string filterFormat, Array values) {{
@@ -2025,7 +2028,7 @@ namespace {0}.BLL {{
 		}}
 		public {0}SelectBuild(IDAL dal) : base(dal, PSqlHelper.Instance) {{ }}
 	}}
-}}", uClass_Name, solutionName, sb6.ToString());
+}}", uClass_Name, solutionName, sb6.ToString(), bll_async_code);
 
 				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, solutionName, @".db\BLL\", basicName, @"\", uClass_Name, ".cs"), Deflate.Compress(sb1.ToString().Replace("|deleteby_fk|", sb5.ToString()))));
 				clearSb();
@@ -2348,10 +2351,10 @@ namespace {0}.BLL {{
 					});
 
 					string str_mvcdel = string.Format(@"
-		public APIReturn _Del([FromForm] {2}[] ids) {{
+		async public Task<APIReturn> _Del([FromForm] {2}[] ids) {{
 			int affrows = 0;
 			foreach ({2} id in ids)
-				affrows += {1}.Delete(id);
+				affrows += await {1}.DeleteAsync(id);
 			if (affrows > 0) return APIReturn.成功.SetMessage($""删除成功，影响行数：{{affrows}}"");
 			return APIReturn.失败;
 		}}", solutionName, uClass_Name, table.PrimaryKeys[0].CsType.Replace("?", ""));
@@ -2363,11 +2366,11 @@ namespace {0}.BLL {{
 						}
 						pkParses = pkParses.Substring(2);
 						str_mvcdel = string.Format(@"
-		public APIReturn _Del([FromForm] string[] ids) {{
+		async public Task<APIReturn> _Del([FromForm] string[] ids) {{
 			int affrows = 0;
 			foreach (string id in ids) {{
 				string[] vs = id.Split(',');
-				affrows += {1}.Delete({2});
+				affrows += await {1}.DeleteAsync({2});
 			}}
 			if (affrows > 0) return APIReturn.成功.SetMessage($""删除成功，影响行数：{{affrows}}"");
 			return APIReturn.失败;

@@ -184,64 +184,122 @@ namespace Server {
 		}
 
 		protected static string GetDataReaderMethod(NpgsqlDbType type, string csType) {
-			if (csType == "byte[]") return "dr.GetFieldValue<byte[]>(index)";
-			if (csType.EndsWith("]")) return "dr.GetFieldValue<object>(index) as " + csType.Replace("?", "");
+			if (csType == "byte[]") return "dr.GetFieldValue<byte[]>(dataIndex)";
+			if (csType.EndsWith("]")) return "dr.GetFieldValue<object>(dataIndex) as " + csType.Replace("?", "");
 			switch (type) {
-				case NpgsqlDbType.Smallint: return "dr.GetFieldValue<short>(index)";
-				case NpgsqlDbType.Integer: return "dr.GetFieldValue<int>(index)";
-				case NpgsqlDbType.Bigint: return "dr.GetFieldValue<long>(index)";
-				case NpgsqlDbType.Numeric: return "dr.GetFieldValue<decimal>(index)";
-				case NpgsqlDbType.Real: return "dr.GetFieldValue<float>(index)";
-				case NpgsqlDbType.Double: return "dr.GetFieldValue<double>(index)";
-				case NpgsqlDbType.Money: return "dr.GetFieldValue<decimal>(index)";
+				case NpgsqlDbType.Smallint: return "dr.GetFieldValue<short>(dataIndex)";
+				case NpgsqlDbType.Integer: return "dr.GetFieldValue<int>(dataIndex)";
+				case NpgsqlDbType.Bigint: return "dr.GetFieldValue<long>(dataIndex)";
+				case NpgsqlDbType.Numeric: return "dr.GetFieldValue<decimal>(dataIndex)";
+				case NpgsqlDbType.Real: return "dr.GetFieldValue<float>(dataIndex)";
+				case NpgsqlDbType.Double: return "dr.GetFieldValue<double>(dataIndex)";
+				case NpgsqlDbType.Money: return "dr.GetFieldValue<decimal>(dataIndex)";
 
 				case NpgsqlDbType.Char:
 				case NpgsqlDbType.Varchar:
-				case NpgsqlDbType.Text: return "dr.GetFieldValue<string>(index)";
+				case NpgsqlDbType.Text: return "dr.GetFieldValue<string>(dataIndex)";
 
 				case NpgsqlDbType.Timestamp:
-				case NpgsqlDbType.TimestampTZ: return "dr.GetFieldValue<NpgsqlDateTime>(index).ToDateTime()";
-				case NpgsqlDbType.Date: return "(DateTime)dr.GetFieldValue<NpgsqlDate>(index)";
+				case NpgsqlDbType.TimestampTZ: return "dr.GetFieldValue<NpgsqlDateTime>(dataIndex).ToDateTime()";
+				case NpgsqlDbType.Date: return "(DateTime)dr.GetFieldValue<NpgsqlDate>(dataIndex)";
 				case NpgsqlDbType.Time:
-				case NpgsqlDbType.TimeTZ: return "dr.GetFieldValue<TimeSpan>(index)";
-				case NpgsqlDbType.Interval: return "dr.GetFieldValue<NpgsqlTimeSpan>(index).Time";
+				case NpgsqlDbType.TimeTZ: return "dr.GetFieldValue<TimeSpan>(dataIndex)";
+				case NpgsqlDbType.Interval: return "dr.GetFieldValue<NpgsqlTimeSpan>(dataIndex).Time";
 
-				case NpgsqlDbType.Boolean: return "dr.GetFieldValue<bool>(index)";
-				case NpgsqlDbType.Bytea: return "dr.GetFieldValue<byte[]>(index)";
+				case NpgsqlDbType.Boolean: return "dr.GetFieldValue<bool>(dataIndex)";
+				case NpgsqlDbType.Bytea: return "dr.GetFieldValue<byte[]>(dataIndex)";
 				case NpgsqlDbType.Bit:
-				case NpgsqlDbType.Varbit: return "dr.GetFieldValue<BitArray>(index)";
+				case NpgsqlDbType.Varbit: return "dr.GetFieldValue<BitArray>(dataIndex)";
 
-				case NpgsqlDbType.Point: return "dr.GetFieldValue<NpgsqlPoint>(index)";
-				case NpgsqlDbType.Line: return "dr.GetFieldValue<NpgsqlLine>(index)";
-				case NpgsqlDbType.LSeg: return "dr.GetFieldValue<NpgsqlLSeg>(index)";
-				case NpgsqlDbType.Box: return "dr.GetFieldValue<NpgsqlBox>(index)";
-				case NpgsqlDbType.Path: return "dr.GetFieldValue<NpgsqlPath>(index)";
-				case NpgsqlDbType.Polygon: return "dr.GetFieldValue<NpgsqlPolygon>(index)";
-				case NpgsqlDbType.Circle: return "dr.GetFieldValue<NpgsqlCircle>(index)";
+				case NpgsqlDbType.Point: return "dr.GetFieldValue<NpgsqlPoint>(dataIndex)";
+				case NpgsqlDbType.Line: return "dr.GetFieldValue<NpgsqlLine>(dataIndex)";
+				case NpgsqlDbType.LSeg: return "dr.GetFieldValue<NpgsqlLSeg>(dataIndex)";
+				case NpgsqlDbType.Box: return "dr.GetFieldValue<NpgsqlBox>(dataIndex)";
+				case NpgsqlDbType.Path: return "dr.GetFieldValue<NpgsqlPath>(dataIndex)";
+				case NpgsqlDbType.Polygon: return "dr.GetFieldValue<NpgsqlPolygon>(dataIndex)";
+				case NpgsqlDbType.Circle: return "dr.GetFieldValue<NpgsqlCircle>(dataIndex)";
 
-				case NpgsqlDbType.Cidr: return "dr.GetFieldValue<NpgsqlInet>(index)";
-				case NpgsqlDbType.Inet: return "dr.GetFieldValue<IPAddress>(index)";
-				case NpgsqlDbType.MacAddr: return "dr.GetFieldValue<PhysicalAddress>(index)";
+				case NpgsqlDbType.Cidr: return "dr.GetFieldValue<NpgsqlInet>(dataIndex)";
+				case NpgsqlDbType.Inet: return "dr.GetFieldValue<IPAddress>(dataIndex)";
+				case NpgsqlDbType.MacAddr: return "dr.GetFieldValue<PhysicalAddress>(dataIndex)";
 
 				case NpgsqlDbType.Json:
-				case NpgsqlDbType.Jsonb: return "dr.GetFieldValue<string>(index)";
-				case NpgsqlDbType.Uuid: return "dr.GetFieldValue<Guid>(index)";
+				case NpgsqlDbType.Jsonb: return "dr.GetFieldValue<string>(dataIndex)";
+				case NpgsqlDbType.Uuid: return "dr.GetFieldValue<Guid>(dataIndex)";
 
-				case NpgsqlDbType.IntegerRange: return "dr.GetFieldValue<NpgsqlRange<int>>(index)";
-				case NpgsqlDbType.BigintRange: return "dr.GetFieldValue<NpgsqlRange<long>>(index)";
-				case NpgsqlDbType.NumericRange: return "dr.GetFieldValue<NpgsqlRange<decimal>>(index)";
+				case NpgsqlDbType.IntegerRange: return "dr.GetFieldValue<NpgsqlRange<int>>(dataIndex)";
+				case NpgsqlDbType.BigintRange: return "dr.GetFieldValue<NpgsqlRange<long>>(dataIndex)";
+				case NpgsqlDbType.NumericRange: return "dr.GetFieldValue<NpgsqlRange<decimal>>(dataIndex)";
 				case NpgsqlDbType.TimestampRange:
 				case NpgsqlDbType.TimestampTZRange: 
-				case NpgsqlDbType.DateRange: return "dr.GetFieldValue<NpgsqlRange<DateTime>>(index)";
+				case NpgsqlDbType.DateRange: return "dr.GetFieldValue<NpgsqlRange<DateTime>>(dataIndex)";
 
-				case NpgsqlDbType.Hstore: return "dr.GetFieldValue<Dictionary<string, string>>(index)";
-				case NpgsqlDbType.Geometry: return "dr.GetFieldValue<PostgisGeometry>(index)";
+				case NpgsqlDbType.Hstore: return "dr.GetFieldValue<Dictionary<string, string>>(dataIndex)";
+				case NpgsqlDbType.Geometry: return "dr.GetFieldValue<PostgisGeometry>(dataIndex)";
 				case NpgsqlDbType.Enum:
-				case NpgsqlDbType.Composite: return "dr.GetFieldValue<" + csType.Replace("?", "") + ">(index)";
-				default: return "dr.GetFieldValue<object>(index)";
+				case NpgsqlDbType.Composite: return "dr.GetFieldValue<" + csType.Replace("?", "") + ">(dataIndex)";
+				default: return "dr.GetFieldValue<object>(dataIndex)";
 			}
 		}
 
+		protected static string GetDataReaderMethodAsync(NpgsqlDbType type, string csType) {
+			if (csType == "byte[]") return "await dr.GetFieldValueAsync<byte[]>(dataIndex)";
+			if (csType.EndsWith("]")) return "await dr.GetFieldValueAsync<object>(dataIndex) as " + csType.Replace("?", "");
+			switch (type) {
+				case NpgsqlDbType.Smallint: return "await dr.GetFieldValueAsync<short>(dataIndex)";
+				case NpgsqlDbType.Integer: return "await dr.GetFieldValueAsync<int>(dataIndex)";
+				case NpgsqlDbType.Bigint: return "await dr.GetFieldValueAsync<long>(dataIndex)";
+				case NpgsqlDbType.Numeric: return "await dr.GetFieldValueAsync<decimal>(dataIndex)";
+				case NpgsqlDbType.Real: return "await dr.GetFieldValueAsync<float>(dataIndex)";
+				case NpgsqlDbType.Double: return "await dr.GetFieldValueAsync<double>(dataIndex)";
+				case NpgsqlDbType.Money: return "await dr.GetFieldValueAsync<decimal>(dataIndex)";
+
+				case NpgsqlDbType.Char:
+				case NpgsqlDbType.Varchar:
+				case NpgsqlDbType.Text: return "await dr.GetFieldValueAsync<string>(dataIndex)";
+
+				case NpgsqlDbType.Timestamp:
+				case NpgsqlDbType.TimestampTZ: return "(await dr.GetFieldValueAsync<NpgsqlDateTime>(dataIndex)).ToDateTime()";
+				case NpgsqlDbType.Date: return "(DateTime)(await dr.GetFieldValueAsync<NpgsqlDate>(dataIndex))";
+				case NpgsqlDbType.Time:
+				case NpgsqlDbType.TimeTZ: return "await dr.GetFieldValueAsync<TimeSpan>(dataIndex)";
+				case NpgsqlDbType.Interval: return "(await dr.GetFieldValueAsync<NpgsqlTimeSpan>(dataIndex)).Time";
+
+				case NpgsqlDbType.Boolean: return "await dr.GetFieldValueAsync<bool>(dataIndex)";
+				case NpgsqlDbType.Bytea: return "await dr.GetFieldValueAsync<byte[]>(dataIndex)";
+				case NpgsqlDbType.Bit:
+				case NpgsqlDbType.Varbit: return "await dr.GetFieldValueAsync<BitArray>(dataIndex)";
+
+				case NpgsqlDbType.Point: return "await dr.GetFieldValueAsync<NpgsqlPoint>(dataIndex)";
+				case NpgsqlDbType.Line: return "await dr.GetFieldValueAsync<NpgsqlLine>(dataIndex)";
+				case NpgsqlDbType.LSeg: return "await dr.GetFieldValueAsync<NpgsqlLSeg>(dataIndex)";
+				case NpgsqlDbType.Box: return "await dr.GetFieldValueAsync<NpgsqlBox>(dataIndex)";
+				case NpgsqlDbType.Path: return "await dr.GetFieldValueAsync<NpgsqlPath>(dataIndex)";
+				case NpgsqlDbType.Polygon: return "await dr.GetFieldValueAsync<NpgsqlPolygon>(dataIndex)";
+				case NpgsqlDbType.Circle: return "await dr.GetFieldValueAsync<NpgsqlCircle>(dataIndex)";
+
+				case NpgsqlDbType.Cidr: return "await dr.GetFieldValueAsync<NpgsqlInet>(dataIndex)";
+				case NpgsqlDbType.Inet: return "await dr.GetFieldValueAsync<IPAddress>(dataIndex)";
+				case NpgsqlDbType.MacAddr: return "await dr.GetFieldValueAsync<PhysicalAddress>(dataIndex)";
+
+				case NpgsqlDbType.Json:
+				case NpgsqlDbType.Jsonb: return "await dr.GetFieldValueAsync<string>(dataIndex)";
+				case NpgsqlDbType.Uuid: return "await dr.GetFieldValueAsync<Guid>(dataIndex)";
+
+				case NpgsqlDbType.IntegerRange: return "await dr.GetFieldValueAsync<NpgsqlRange<int>>(dataIndex)";
+				case NpgsqlDbType.BigintRange: return "await dr.GetFieldValueAsync<NpgsqlRange<long>>(dataIndex)";
+				case NpgsqlDbType.NumericRange: return "await dr.GetFieldValueAsync<NpgsqlRange<decimal>>(dataIndex)";
+				case NpgsqlDbType.TimestampRange:
+				case NpgsqlDbType.TimestampTZRange:
+				case NpgsqlDbType.DateRange: return "await dr.GetFieldValueAsync<NpgsqlRange<DateTime>>(dataIndex)";
+
+				case NpgsqlDbType.Hstore: return "await dr.GetFieldValueAsync<Dictionary<string, string>>(dataIndex)";
+				case NpgsqlDbType.Geometry: return "await dr.GetFieldValueAsync<PostgisGeometry>(dataIndex)";
+				case NpgsqlDbType.Enum:
+				case NpgsqlDbType.Composite: return "await dr.GetFieldValueAsync<" + csType.Replace("?", "") + ">(dataIndex)";
+				default: return "await dr.GetFieldValueAsync<object>(dataIndex)";
+			}
+		}
 		protected static string GetObjectConvertToCsTypeMethod(NpgsqlDbType type, string csType) {
 			if (csType == "byte[]" || csType.EndsWith("]")) return "{0} as " + csType;
 			switch (type) {
