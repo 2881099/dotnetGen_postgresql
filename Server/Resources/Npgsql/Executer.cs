@@ -6,6 +6,7 @@ using System.Data;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NpgsqlTypes;
@@ -13,6 +14,7 @@ using NpgsqlTypes;
 namespace Npgsql {
 	public partial class Executer : IDisposable {
 
+		public bool IsTracePerformance { get; set; } = string.Compare(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), "Development", true) == 0;
 		public ILogger Log { get; set; }
 		public ConnectionPool Pool { get; }
 		public Executer() { }
@@ -22,9 +24,11 @@ namespace Npgsql {
 		}
 
 		void LoggerException(NpgsqlCommand cmd, Exception e, DateTime dt, string logtxt) {
-			TimeSpan ts = DateTime.Now.Subtract(dt);
-			if (e == null && ts.TotalMilliseconds > 100)
-				Log.LogWarning($"执行SQL语句耗时过长{ts.TotalMilliseconds}ms\r\n{cmd.CommandText}\r\n{logtxt}");
+			if (IsTracePerformance) {
+				TimeSpan ts = DateTime.Now.Subtract(dt);
+				if (e == null && ts.TotalMilliseconds > 100)
+					Log.LogWarning($"执行SQL语句耗时过长{ts.TotalMilliseconds}ms\r\n{cmd.CommandText}\r\n{logtxt}");
+			}
 
 			if (e == null) return;
 			string log = $"数据库出错（执行SQL）〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓\r\n{cmd.CommandText}\r\n";
@@ -72,50 +76,54 @@ namespace Npgsql {
 			string logtxt = "";
 			DateTime logtxt_dt = DateTime.Now;
 			var pc = PrepareCommand(cmd, cmdType, cmdText, cmdParms, ref logtxt);
-			logtxt += $"PrepareCommand: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
-			Exception ex = Lib.Trys(delegate () {
-				logtxt_dt = DateTime.Now;
+			if (IsTracePerformance) logtxt += $"PrepareCommand: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
+			Exception ex = null;
+			try {
+				if (IsTracePerformance) logtxt_dt = DateTime.Now;
 				if (cmd.Connection.State == ConnectionState.Closed) cmd.Connection.Open();
-				logtxt += $"Open: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
-				try {
+				if (IsTracePerformance) {
+					logtxt += $"Open: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
 					logtxt_dt = DateTime.Now;
-					NpgsqlDataReader dr = cmd.ExecuteReader();
-					logtxt += $"ExecuteReader: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
-					while (true) {
-						logtxt_dt = DateTime.Now;
-						bool isread = dr.Read();
-						logtxt += $"	dr.Read: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
-						if (isread == false) break;
+				}
+				NpgsqlDataReader dr = cmd.ExecuteReader();
+				if (IsTracePerformance) logtxt += $"ExecuteReader: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
+				while (true) {
+					if (IsTracePerformance) logtxt_dt = DateTime.Now;
+					bool isread = dr.Read();
+					if (IsTracePerformance) logtxt += $"	dr.Read: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
+					if (isread == false) break;
 
-						if (readerHander != null) {
+					if (readerHander != null) {
+						object[] values = null;
+						if (IsTracePerformance) {
 							logtxt_dt = DateTime.Now;
-							object[] values = new object[dr.FieldCount];
+							values = new object[dr.FieldCount];
 							dr.GetValues(values);
 							logtxt += $"	dr.GetValues: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
 							logtxt_dt = DateTime.Now;
-							readerHander(dr);
-							logtxt += $"	readerHander: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms ({string.Join(",", values)})\r\n";
 						}
+						readerHander(dr);
+						if (IsTracePerformance) logtxt += $"	readerHander: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms ({string.Join(",", values)})\r\n";
 					}
-					logtxt_dt = DateTime.Now;
-					dr.Dispose();
-					logtxt += $"ExecuteReader_dispose: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
-				} catch {
-					throw;
 				}
-			}, 1);
+				if (IsTracePerformance) logtxt_dt = DateTime.Now;
+				dr.Dispose();
+				if (IsTracePerformance) logtxt += $"ExecuteReader_dispose: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
+			} catch (Exception ex2) {
+				ex = ex2;
+			}
 
-			logtxt_dt = DateTime.Now;
+			if (IsTracePerformance) logtxt_dt = DateTime.Now;
 			if (pc.Tran == null) this.Pool.ReleaseConnection(pc.Conn);
-			logtxt += $"ReleaseConnection: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms";
+			if (IsTracePerformance) logtxt += $"ReleaseConnection: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms";
 			LoggerException(cmd, ex, dt, logtxt);
 		}
 		public object[][] ExeucteArray(CommandType cmdType, string cmdText, params NpgsqlParameter[] cmdParms) {
 			List<object[]> ret = new List<object[]>();
 			ExecuteReader(dr => {
-				object[] item = new object[dr.FieldCount];
-				dr.GetValues(item);
-				ret.Add(item);
+				object[] values = new object[dr.FieldCount];
+				dr.GetValues(values);
+				ret.Add(values);
 			}, cmdType, cmdText, cmdParms);
 			return ret.ToArray();
 		}
@@ -125,14 +133,13 @@ namespace Npgsql {
 			string logtxt = "";
 			var pc = PrepareCommand(cmd, cmdType, cmdText, cmdParms, ref logtxt);
 			int val = 0;
-			Exception ex = Lib.Trys(delegate () {
+			Exception ex = null;
+			try {
 				if (cmd.Connection.State == ConnectionState.Closed) cmd.Connection.Open();
-				try {
-					val = cmd.ExecuteNonQuery();
-				} catch {
-					throw;
-				}
-			}, 1);
+				val = cmd.ExecuteNonQuery();
+			} catch (Exception ex2) {
+				ex = ex2;
+			}
 
 			if (pc.Tran == null) this.Pool.ReleaseConnection(pc.Conn);
 			LoggerException(cmd, ex, dt, "");
@@ -145,14 +152,13 @@ namespace Npgsql {
 			string logtxt = "";
 			var pc = PrepareCommand(cmd, cmdType, cmdText, cmdParms, ref logtxt);
 			object val = null;
-			Exception ex = Lib.Trys(delegate () {
+			Exception ex = null;
+			try {
 				if (cmd.Connection.State == ConnectionState.Closed) cmd.Connection.Open();
-				try {
-					val = cmd.ExecuteScalar();
-				} catch {
-					throw;
-				}
-			}, 1);
+				val = cmd.ExecuteScalar();
+			} catch (Exception ex2) {
+				ex = ex2;
+			}
 
 			if (pc.Tran == null) this.Pool.ReleaseConnection(pc.Conn);
 			LoggerException(cmd, ex, dt, "");
@@ -175,23 +181,23 @@ namespace Npgsql {
 
 			Connection2 conn = null;
 			NpgsqlTransaction tran = CurrentThreadTransaction;
-			logtxt += $"	PrepareCommand_part1: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms cmdParms: {cmdParms.Length}\r\n";
+			if (IsTracePerformance) logtxt += $"	PrepareCommand_part1: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms cmdParms: {cmdParms.Length}\r\n";
 
 			if (tran == null) {
-				dt = DateTime.Now;
+				if (IsTracePerformance) dt = DateTime.Now;
 				conn = this.Pool.GetConnection();
 				cmd.Connection = conn.SqlConnection;
-				logtxt += $"	PrepareCommand_tran==null: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
+				if (IsTracePerformance) logtxt += $"	PrepareCommand_tran==null: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
 			} else {
-				dt = DateTime.Now;
+				if (IsTracePerformance) dt = DateTime.Now;
 				cmd.Connection = tran.Connection;
 				cmd.Transaction = tran;
-				logtxt += $"	PrepareCommand_tran!=null: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
+				if (IsTracePerformance) logtxt += $"	PrepareCommand_tran!=null: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
 			}
 
-			dt = DateTime.Now;
+			if (IsTracePerformance) dt = DateTime.Now;
 			AutoCommitTransaction();
-			logtxt += $"	AutoCommitTransaction: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
+			if (IsTracePerformance) logtxt += $"	AutoCommitTransaction: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
 
 			return new PrepareCommandReturnInfo { Conn = conn, Tran = tran };
 		}

@@ -130,18 +130,17 @@ namespace {0}.DAL {{
 		}}
 
 		public static string Addslashes(string filter, params object[] parms) {{ return Executer.Addslashes(filter, parms); }}
-		public static void ExecuteReader(Action<NpgsqlDataReader> readerHander, string cmdText, params NpgsqlParameter[] cmdParms) {{
-			Instance.ExecuteReader(readerHander, CommandType.Text, cmdText, cmdParms);
-		}}
-		public static object[][] ExeucteArray(string cmdText, params NpgsqlParameter[] cmdParms) {{
-			return Instance.ExeucteArray(CommandType.Text, cmdText, cmdParms);
-		}}
-		public static int ExecuteNonQuery(string cmdText, params NpgsqlParameter[] cmdParms) {{
-			return Instance.ExecuteNonQuery(CommandType.Text, cmdText, cmdParms);
-		}}
-		public static object ExecuteScalar(string cmdText, params NpgsqlParameter[] cmdParms) {{
-			return Instance.ExecuteScalar(CommandType.Text, cmdText, cmdParms);
-		}}
+
+		public static void ExecuteReader(Action<NpgsqlDataReader> readerHander, string cmdText, params NpgsqlParameter[] cmdParms) =>Instance.ExecuteReader(readerHander, CommandType.Text, cmdText, cmdParms);
+		public static object[][] ExeucteArray(string cmdText, params NpgsqlParameter[] cmdParms) => Instance.ExeucteArray(CommandType.Text, cmdText, cmdParms);
+		public static int ExecuteNonQuery(string cmdText, params NpgsqlParameter[] cmdParms) => Instance.ExecuteNonQuery(CommandType.Text, cmdText, cmdParms);
+		public static object ExecuteScalar(string cmdText, params NpgsqlParameter[] cmdParms) => Instance.ExecuteScalar(CommandType.Text, cmdText, cmdParms);
+
+		public static Task ExecuteReaderAsync(Func<NpgsqlDataReader, Task> readerHander, string cmdText, params NpgsqlParameter[] cmdParms) => Instance.ExecuteReaderAsync(readerHander, CommandType.Text, cmdText, cmdParms);
+		public static Task<object[][]> ExeucteArrayAsync(string cmdText, params NpgsqlParameter[] cmdParms) => Instance.ExeucteArrayAsync(CommandType.Text, cmdText, cmdParms);
+		public static Task<int> ExecuteNonQueryAsync(string cmdText, params NpgsqlParameter[] cmdParms) => Instance.ExecuteNonQueryAsync(CommandType.Text, cmdText, cmdParms);
+		public static Task<object> ExecuteScalarAsync(string cmdText, params NpgsqlParameter[] cmdParms) => Instance.ExecuteScalarAsync(CommandType.Text, cmdText, cmdParms);
+
 		/// <summary>
 		/// 开启事务（不支持异步），10秒未执行完将超时
 		/// </summary>
@@ -346,10 +345,10 @@ namespace {0}.BLL {{
 			pass = cfg[""ConnectionStrings:redis:pass""];
 			Name = cfg[""ConnectionStrings:redis:name""];
 			Instance = new CSRedis.ConnectionPool(ip, port, poolsize);
-			Instance.Connected += (s, o) => {{
+			Instance.Connected += async (s, o) => {{
 				CSRedis.RedisClient rc = s as CSRedis.RedisClient;
-				if (!string.IsNullOrEmpty(pass)) rc.Auth(pass);
-				if (database > 0) rc.Select(database);
+				if (!string.IsNullOrEmpty(pass)) await rc.AuthAsync(pass);
+				if (database > 0) await rc.SelectAsync(database);
 			}};
 		}}
 	}}
@@ -373,6 +372,7 @@ namespace {0}.BLL {{
 
 	public static partial class BLLExtensionMethods {{
 		public static List<TReturnInfo> ToList<TReturnInfo>(this SelectBuild<TReturnInfo> select, int expireSeconds, string cacheKey = null) {{ return select.ToList(RedisHelper.Get, RedisHelper.Set, TimeSpan.FromSeconds(expireSeconds), cacheKey); }}
+		public static Task<List<TReturnInfo>> ToListAsync<TReturnInfo>(this SelectBuild<TReturnInfo> select, int expireSeconds, string cacheKey = null) {{ return select.ToListAsync(RedisHelper.GetAsync, RedisHelper.SetAsync, TimeSpan.FromSeconds(expireSeconds), cacheKey); }}
 	}}
 }}";
 			#endregion

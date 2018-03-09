@@ -1136,6 +1136,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using System.Net;
 using System.Net.NetworkInformation;
 using Newtonsoft.Json;
@@ -1170,25 +1171,46 @@ namespace {0}.DAL {{
 
 				sb1.AppendFormat(@"
 		public {0}Info GetItem(NpgsqlDataReader dr) {{
-			int index = -1;
-			return GetItem(dr, ref index) as {0}Info;
+			int dataIndex = -1;
+			return GetItem(dr, ref dataIndex) as {0}Info;
 		}}
-		public object GetItem(NpgsqlDataReader dr, ref int index) {{
+		public object GetItem(NpgsqlDataReader dr, ref int dataIndex) {{
 			{0}Info item = new {0}Info();", uClass_Name);
 
 				foreach (ColumnInfo columnInfo in table.Columns) {
 					sb1.AppendFormat(@"
-			if (!dr.IsDBNull(++index)) item.{0} = {1};", (columnInfo.CsType == "JToken" ? "_" : "") + CodeBuild.UFString(columnInfo.Name), CodeBuild.GetDataReaderMethod(columnInfo.Type, columnInfo.CsType));
+			if (!dr.IsDBNull(++dataIndex)) item.{0} = {1};", (columnInfo.CsType == "JToken" ? "_" : "") + CodeBuild.UFString(columnInfo.Name), CodeBuild.GetDataReaderMethod(columnInfo.Type, columnInfo.CsType));
 					if (columnInfo.IsPrimaryKey)
 						sb1.AppendFormat(@" if (item.{0} == null) return null;", (columnInfo.CsType == "JToken" ? "_" : "") + CodeBuild.UFString(columnInfo.Name));
 				}
 
 				sb1.AppendFormat(@"
 			return item;
-		}}");
+		}}
+		private CopyItemAllField({0}Info item, {0}Info newitem) {{{1}
+		}}", uClass_Name, csItemAllFieldCopy);
 				sb1.Append(sb4.ToString());
 				sb1.AppendFormat(@"
 		#endregion", uClass_Name, table.Columns.Count + 1);
+
+				string dal_async_code = string.Format(@"
+		public {0}Info GetItemAsync(NpgsqlDataReader dr) {{
+			var read = await GetItemAsync(dr, -1);
+			return read.result as {0}Info;
+		}}
+		public Task<(object result, int dataIndex)> GetItemAsync(NpgsqlDataReader dr, int dataIndex) {{
+			{0}Info item = new {0}Info();", uClass_Name);
+				foreach (ColumnInfo columnInfo in table.Columns) {
+					dal_async_code += string.Format(@"
+			if (!await dr.IsDBNullAsync(++dataIndex)) item.{0} = {1};", (columnInfo.CsType == "JToken" ? "_" : "") + CodeBuild.UFString(columnInfo.Name), CodeBuild.GetDataReaderMethod(columnInfo.Type, columnInfo.CsType).Replace("dr.GetFieldValue", "dr.GetFieldValueAsync"));
+					if (columnInfo.IsPrimaryKey)
+						dal_async_code += string.Format(@" if (item.{0} == null) return (null, dataIndex);", (columnInfo.CsType == "JToken" ? "_" : "") + CodeBuild.UFString(columnInfo.Name));
+				}
+
+				dal_async_code += string.Format(@"
+			return (item, dataIndex);
+		}}", uClass_Name);
+
 				Dictionary<string, bool> del_exists = new Dictionary<string, bool>();
 				foreach (List<ColumnInfo> cs in table.Uniques) {
 					string parms = string.Empty;
@@ -1216,6 +1238,11 @@ namespace {0}.DAL {{
 			return PSqlHelper.ExecuteNonQuery(string.Concat(TSQL.Delete, @""{1}""), 
 {3});
 		}}", parms, sqlParms, cs[0].IsPrimaryKey ? string.Empty : parmsBy, CodeBuild.AppendParameters(cs, "				"));
+					dal_async_code += string.Format(@"
+		public Task<int> Delete{2}Async({0}) {{
+			return PSqlHelper.ExecuteNonQueryAsync(string.Concat(TSQL.Delete, @""{1}""), 
+{3});
+		}}", parms, sqlParms, cs[0].IsPrimaryKey ? string.Empty : parmsBy, CodeBuild.AppendParameters(cs, "				"));
 				}
 				table.ForeignKeys.ForEach(delegate (ForeignKeyInfo fkk) {
 					string parms = string.Empty;
@@ -1235,6 +1262,11 @@ namespace {0}.DAL {{
 					sb2.AppendFormat(@"
 		public int Delete{2}({0}) {{
 			return PSqlHelper.ExecuteNonQuery(string.Concat(TSQL.Delete, @""{1}""), 
+{3});
+		}}", parms, sqlParms, parmsBy, CodeBuild.AppendParameters(fkk.Columns, "				"));
+					dal_async_code += string.Format(@"
+		public Task<int> Delete{2}Async({0}) {{
+			return PSqlHelper.ExecuteNonQueryAsync(string.Concat(TSQL.Delete, @""{1}""), 
 {3});
 		}}", parms, sqlParms, parmsBy, CodeBuild.AppendParameters(fkk.Columns, "				"));
 				});
@@ -1324,8 +1356,18 @@ namespace {0}.DAL {{
 					string dal_insert_code = string.Format(@"
 			{0}Info newitem = null;
 			PSqlHelper.ExecuteReader(dr => {{ newitem = GetItem(dr); }}, TSQL.Insert, GetParameters(item));
-			if (newitem == null) return null;{1}
-			return item;", uClass_Name, csItemAllFieldCopy);
+			if (newitem == null) return null;
+			this.CopyItemAllField(item, newitem);
+			return item;", uClass_Name);
+					dal_async_code += string.Format(@"
+		async public Task<{0}Info> InsertAsync({0}Info item) {{
+			{0}Info newitem = null;
+			await PSqlHelper.ExecuteReaderAsync(async dr => {{ newitem = await GetItemAsync(dr); }}, TSQL.Insert, GetParameters(item));
+			if (newitem == null) return null;
+			this.CopyItemAllField(item, newitem);
+			return item;
+		}}", uClass_Name);
+
 					sb1.AppendFormat(@"
 {1}
 
@@ -1356,6 +1398,18 @@ namespace {0}.DAL {{
 				{0}Info newitem = null;
 				PSqlHelper.ExecuteReader(dr => {{
 					newitem = BLL.{0}.dal.GetItem(dr);
+				}}, sql + TSQL.Returning, _parameters.ToArray());
+				if (newitem == null) return 0;
+				while (_setQs.Count > 0) _setQs.Dequeue()(newitem);
+				return 1;
+			}}
+			async public Task<int> ExecuteNonQueryAsync() {{
+				string sql = this.ToString();
+				if (string.IsNullOrEmpty(sql)) return 0;
+				if (_item == null) return await PSqlHelper.ExecuteNonQueryAsync(sql, _parameters.ToArray());
+				AppInfo newitem = null;
+				await PSqlHelper.ExecuteReaderAsync(async dr => {{
+					newitem = await BLL.App.dal.GetItemAsync(dr);
 				}}, sql + TSQL.Returning, _parameters.ToArray());
 				if (newitem == null) return 0;
 				while (_setQs.Count > 0) _setQs.Dequeue()(newitem);
@@ -1407,6 +1461,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using System.Net;
 using System.Net.NetworkInformation;
 using Newtonsoft.Json.Linq;
@@ -1436,7 +1491,7 @@ namespace {0}.BLL {{
 					if (uniques_dic.ContainsKey(parms)) continue;
 					uniques_dic.Add(parms, true);
 				}
-
+				string bll_async_code = "";
 				Dictionary<string, bool> del_exists2 = new Dictionary<string, bool>();
 				foreach (List<ColumnInfo> cs in table.Uniques) {
 					string parms = string.Empty;
@@ -1480,6 +1535,19 @@ namespace {0}.BLL {{
 			return dal.Delete{2}({1});
 		}}", parms, parmsNoneType, cs[0].IsPrimaryKey ? string.Empty : parmsBy, uClass_Name, parmsNewItem);
 
+					if (uniques_dic.Count > 1)
+						bll_async_code += string.Format(@"
+		async public static Task<int> Delete{2}Async({0}) {{
+			if (itemCacheTimeout > 0) await RemoveCacheAsync(GetItem{2}({1}));
+			return await dal.Delete{2}Async({1});
+		}}", parms, parmsNoneType, cs[0].IsPrimaryKey ? string.Empty : parmsBy);
+					else
+						bll_async_code += string.Format(@"
+		async public static Task<int> Delete{2}Async({0}) {{
+			if (itemCacheTimeout > 0) await RemoveCacheAsync(new {3}Info {{ {4} }});
+			return await dal.Delete{2}Async({1});
+		}}", parms, parmsNoneType, cs[0].IsPrimaryKey ? string.Empty : parmsBy, uClass_Name, parmsNewItem);
+
 
 					sb3.AppendFormat(@"
 		public static {1}Info GetItem{2}({4}) {{
@@ -1491,6 +1559,20 @@ namespace {0}.BLL {{
 			{1}Info item = Select{7}.ToOne();
 			if (item == null) return null;
 			RedisHelper.Set(key, item.Stringify(), itemCacheTimeout);
+			return item;
+		}}", solutionName, uClass_Name, cs[0].IsPrimaryKey ? string.Empty : parmsBy, parmsNodeTypeUpdateCacheRemove.Replace("item.", ""),
+		parms, parmsNoneType, cacheCond, whereCondi);
+
+					bll_async_code += string.Format(@"
+		async public static Task<{1}Info> GetItem{2}Async({4}) {{
+			if (itemCacheTimeout <= 0) return await Select{7}.ToOneAsync();
+			string key = string.Concat(""{0}_BLL_{1}{2}_"", {3});
+			string value = await RedisHelper.GetAsync(key);
+			if (!string.IsNullOrEmpty(value))
+				try {{ return {1}Info.Parse(value); }} catch {{ }}
+			{1}Info item = await Select{7}.ToOneAsync();
+			if (item == null) return null;
+			await RedisHelper.SetAsync(key, item.Stringify(), itemCacheTimeout);
 			return item;
 		}}", solutionName, uClass_Name, cs[0].IsPrimaryKey ? string.Empty : parmsBy, parmsNodeTypeUpdateCacheRemove.Replace("item.", ""),
 		parms, parmsNoneType, cacheCond, whereCondi);
@@ -1536,7 +1618,7 @@ namespace {0}.BLL {{
 						sb1.AppendFormat(@"
 		public static int Update({1}Info item) {{
 			if (itemCacheTimeout > 0) RemoveCache(item);
-			return dal.Update(item);
+			return dal.Update(item)ExecuteNonQuery();
 		}}
 		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy({2}) {{
 			return UpdateDiy(null, {3});
@@ -1553,6 +1635,14 @@ namespace {0}.BLL {{
 		}}
 ", solutionName, uClass_Name, pkCsParam.Replace("?", ""), pkCsParamNoType, xxxxtempskdf.Substring(0, xxxxtempskdf.Length - 2));
 					}
+
+					bll_async_code += string.Format(@"
+		async public static Task<int> UpdateAsync({1}Info item) {{
+			if (itemCacheTimeout > 0) await RemoveCacheAsync(item);
+			return await dal.Update(item).ExecuteNonQueryAsync();
+		}}
+", solutionName, uClass_Name);
+
 					if (table.Columns.Count > 5)
 						sb1.AppendFormat(@"
 		/// <summary>
@@ -1564,11 +1654,35 @@ namespace {0}.BLL {{
 			return Insert(new {0}Info {{{2}}});
 		}}", uClass_Name, CsParam2, CsParamNoType2);
 
+					if (table.Columns.Count > 5)
+						bll_async_code += string.Format(@"
+		/// <summary>
+		/// 适用字段较少的表；避规后续改表风险，字段数较大请改用 {0}.Insert({0}Info item)
+		/// </summary>
+		[Obsolete]", uClass_Name);
+					bll_async_code += string.Format(@"
+		public static Task<{0}Info> InsertAsync({1}) {{
+			return InsertAsync(new {0}Info {{{2}}});
+		}}", uClass_Name, CsParam2, CsParamNoType2);
+
 					var redisRemove = sb4.ToString();
 					if (!string.IsNullOrEmpty(redisRemove)) redisRemove = string.Concat(@"
 			RedisHelper.Remove(", redisRemove.Substring(0, redisRemove.Length - 2), ");");
 					sb1.AppendFormat(@"
 		public static {0}Info Insert({0}Info item) {{
+			item = dal.Insert(item);
+			if (itemCacheTimeout > 0) RemoveCache(item);
+			return item;
+		}}
+		private static void RemoveCache({0}Info item) {{
+			if (item == null) return;{2}
+		}}
+		#endregion
+{1}
+", uClass_Name, sb3.ToString(), redisRemove);
+
+					sb1.AppendFormat(@"
+		async public static Task<{0}Info> InsertAsync({0}Info item) {{
 			item = dal.Insert(item);
 			if (itemCacheTimeout > 0) RemoveCache(item);
 			return item;

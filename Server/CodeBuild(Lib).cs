@@ -184,28 +184,29 @@ namespace Server {
 		}
 
 		protected static string GetDataReaderMethod(NpgsqlDbType type, string csType) {
-			if (csType == "byte[]" || csType.EndsWith("]")) return "dr.GetValue(index) as " + csType.Replace("?", "");
+			if (csType == "byte[]") return "dr.GetFieldValue<byte[]>(index)";
+			if (csType.EndsWith("]")) return "dr.GetFieldValue<object>(index) as " + csType.Replace("?", "");
 			switch (type) {
-				case NpgsqlDbType.Smallint: return "dr.GetInt16(index)";
-				case NpgsqlDbType.Integer: return "dr.GetInt32(index)";
-				case NpgsqlDbType.Bigint: return "dr.GetInt64(index)";
-				case NpgsqlDbType.Numeric: return "dr.GetDecimal(index)";
-				case NpgsqlDbType.Real: return "dr.GetFloat(index)";
-				case NpgsqlDbType.Double: return "dr.GetDouble(index)";
-				case NpgsqlDbType.Money: return "dr.GetDecimal(index)";
+				case NpgsqlDbType.Smallint: return "dr.GetFieldValue<short>(index)";
+				case NpgsqlDbType.Integer: return "dr.GetFieldValue<int>(index)";
+				case NpgsqlDbType.Bigint: return "dr.GetFieldValue<long>(index)";
+				case NpgsqlDbType.Numeric: return "dr.GetFieldValue<decimal>(index)";
+				case NpgsqlDbType.Real: return "dr.GetFieldValue<float>(index)";
+				case NpgsqlDbType.Double: return "dr.GetFieldValue<double>(index)";
+				case NpgsqlDbType.Money: return "dr.GetFieldValue<decimal>(index)";
 
 				case NpgsqlDbType.Char:
 				case NpgsqlDbType.Varchar:
-				case NpgsqlDbType.Text: return "dr.GetString(index)";
+				case NpgsqlDbType.Text: return "dr.GetFieldValue<string>(index)";
 
 				case NpgsqlDbType.Timestamp:
-				case NpgsqlDbType.TimestampTZ: return "dr.GetTimeStamp(index).ToDateTime()";
-				case NpgsqlDbType.Date: return "(DateTime)dr.GetDate(index)";
+				case NpgsqlDbType.TimestampTZ: return "dr.GetFieldValue<NpgsqlDateTime>(index).ToDateTime()";
+				case NpgsqlDbType.Date: return "(DateTime)dr.GetFieldValue<NpgsqlDate>(index)";
 				case NpgsqlDbType.Time:
-				case NpgsqlDbType.TimeTZ: return "dr.GetTimeSpan(index)";
-				case NpgsqlDbType.Interval: return "dr.GetInterval(index).Time";
+				case NpgsqlDbType.TimeTZ: return "dr.GetFieldValue<TimeSpan>(index)";
+				case NpgsqlDbType.Interval: return "dr.GetFieldValue<NpgsqlTimeSpan>(index).Time";
 
-				case NpgsqlDbType.Boolean: return "dr.GetBoolean(index)";
+				case NpgsqlDbType.Boolean: return "dr.GetFieldValue<bool>(index)";
 				case NpgsqlDbType.Bytea: return "dr.GetFieldValue<byte[]>(index)";
 				case NpgsqlDbType.Bit:
 				case NpgsqlDbType.Varbit: return "dr.GetFieldValue<BitArray>(index)";
@@ -223,8 +224,8 @@ namespace Server {
 				case NpgsqlDbType.MacAddr: return "dr.GetFieldValue<PhysicalAddress>(index)";
 
 				case NpgsqlDbType.Json:
-				case NpgsqlDbType.Jsonb: return "dr.GetString(index)";
-				case NpgsqlDbType.Uuid: return "dr.GetGuid(index)";
+				case NpgsqlDbType.Jsonb: return "dr.GetFieldValue<string>(index)";
+				case NpgsqlDbType.Uuid: return "dr.GetFieldValue<Guid>(index)";
 
 				case NpgsqlDbType.IntegerRange: return "dr.GetFieldValue<NpgsqlRange<int>>(index)";
 				case NpgsqlDbType.BigintRange: return "dr.GetFieldValue<NpgsqlRange<long>>(index)";
@@ -233,11 +234,11 @@ namespace Server {
 				case NpgsqlDbType.TimestampTZRange: 
 				case NpgsqlDbType.DateRange: return "dr.GetFieldValue<NpgsqlRange<DateTime>>(index)";
 
-				case NpgsqlDbType.Hstore: return "dr.GetValue(index) as Dictionary<string, string>";
-				case NpgsqlDbType.Geometry: return "dr.GetValue(index) as PostgisGeometry";
+				case NpgsqlDbType.Hstore: return "dr.GetFieldValue<Dictionary<string, string>>(index)";
+				case NpgsqlDbType.Geometry: return "dr.GetFieldValue<PostgisGeometry>(index)";
 				case NpgsqlDbType.Enum:
 				case NpgsqlDbType.Composite: return "dr.GetFieldValue<" + csType.Replace("?", "") + ">(index)";
-				default: return "dr.GetValue(index)";
+				default: return "dr.GetFieldValue<object>(index)";
 			}
 		}
 

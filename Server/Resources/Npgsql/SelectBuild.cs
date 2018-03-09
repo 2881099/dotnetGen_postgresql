@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Data;
 using System.Linq;
 using Newtonsoft.Json;
+using System.Threading.Tasks;
 
 namespace Npgsql {
 	public partial interface IDAL {
@@ -12,21 +13,23 @@ namespace Npgsql {
 		string Field { get; }
 		string Sort { get; }
 		object GetItem(NpgsqlDataReader dr, ref int index);
+		Task<(object result, int dataIndex)> GetItemAsync(NpgsqlDataReader dr, int index);
 	}
 	public class SelectBuild<TReturnInfo, TLinket> : SelectBuild<TReturnInfo> where TLinket : SelectBuild<TReturnInfo> {
-		protected SelectBuild<TReturnInfo> Where1Or(string filterFormat, Array values) {
+		protected TLinket Where1Or(string filterFormat, Array values) {
 			if (values == null) values = new object[] { null };
-			if (values.Length == 0) return this;
-			if (values.Length == 1) return base.Where(filterFormat, values.GetValue(0));
+			if (values.Length == 0) return this as TLinket;
+			if (values.Length == 1) return base.Where(filterFormat, values.GetValue(0)) as TLinket;
 			string filter = string.Empty;
 			for (int a = 0; a < values.Length; a++) filter = string.Concat(filter, " OR ", string.Format(filterFormat, "{" + a + "}"));
 			object[] parms = new object[values.Length];
 			values.CopyTo(parms, 0);
-			return base.Where(filter.Substring(4), parms);
+			return base.Where(filter.Substring(4), parms) as TLinket;
 		}
 		public new TLinket Count(out long count) => base.Count(out count) as TLinket;
 		public new TLinket Where(string filter, params object[] parms) => base.Where(true, filter, parms) as TLinket;
 		public new TLinket Where(bool isadd, string filter, params object[] parms) => base.Where(isadd, filter, parms) as TLinket;
+		public TLinket WhereExists<T>(SelectBuild<T> select, bool isNotExists = false) => this.Where((isNotExists ? "NOT " : "") + $"EXISTS({select.ToString("1")})") as TLinket;
 		public new TLinket GroupBy(string groupby) => base.GroupBy(groupby) as TLinket;
 		public new TLinket Having(string filter, params object[] parms) => base.Having(true, filter, parms) as TLinket;
 		public new TLinket Having(bool isadd, string filter, params object[] parms) => base.Having(isadd, filter, parms) as TLinket;
@@ -49,6 +52,7 @@ namespace Npgsql {
 		public new TLinket DistinctOn(string fields, string orderby = null) => base.DistinctOn(fields, orderby) as TLinket;
 		public new TLinket From<TBLL>() => base.From<TBLL>() as TLinket;
 		public new TLinket From<TBLL>(string alias) => base.From<TBLL>(alias) as TLinket;
+		public new TLinket As(string alias) => base.As(alias) as TLinket;
 		public new TLinket InnerJoin<TBLL>(string alias, string on) => base.InnerJoin<TBLL>(alias, on) as TLinket;
 		public new TLinket LeftJoin<TBLL>(string alias, string on) => base.LeftJoin<TBLL>(alias, on) as TLinket;
 		public new TLinket RightJoin<TBLL>(string alias, string on) => base.RightJoin<TBLL>(alias, on) as TLinket;
@@ -58,7 +62,7 @@ namespace Npgsql {
 		public new TLinket Page(int pageIndex, int pageSize) => base.Page(pageIndex, pageSize) as TLinket;
 		public SelectBuild(IDAL dal, Executer exec) : base(dal, exec) { }
 	}
-	public class SelectBuild<TReturnInfo> {
+	public partial class SelectBuild<TReturnInfo> {
 		protected int _limit, _skip;
 		protected string _orderby, _field, _table, _join, _where, _groupby, _having, _distinctOnFields, _distinctOnOrderby, _overField, _overWindow;
 		protected List<NpgsqlParameter> _params = new List<NpgsqlParameter>();
@@ -118,7 +122,7 @@ namespace Npgsql {
 					if (isCache) cacheList.Add(type.GetMethod("Stringify").Invoke(obj, null));
 				}
 				int dataCount = dr.FieldCount;
-				object[] overValue = new object[dataCount - dataIndex];
+				object[] overValue = new object[dataCount - dataIndex - 1];
 				for (var a = 0; a < overValue.Length; a++) overValue[a] = dr.IsDBNull(++dataIndex) ? null : dr.GetValue(dataIndex);
 				if (overValue.Length > 0) type.GetProperty("OverValue")?.SetValue(info, overValue, null);
 			}, CommandType.Text, sql, _params.ToArray());
@@ -204,10 +208,11 @@ namespace Npgsql {
 			return new SelectBuild<TReturnInfo>(dal, exec);
 		}
 		int _fields_count = 0;
+		string _mainAlias = "a";
 		protected SelectBuild(IDAL dal, Executer exec) {
 			_dals.Add(dal);
 			_field = dal.Field;
-			_table = string.Concat(" \r\nFROM ", dal.Table, " a");
+			_table = string.Concat(" \r\nFROM ", dal.Table, " ", _mainAlias);
 			_exec = exec;
 		}
 		protected SelectBuild<TReturnInfo> From<TBLL>() {
@@ -216,6 +221,11 @@ namespace Npgsql {
 		protected SelectBuild<TReturnInfo> From<TBLL>(string alias) {
 			IDAL dal = this.ConvertTBLL<TBLL>();
 			_table = string.Concat(_table, ", ", dal.Table, " ", alias);
+			return this;
+		}
+		protected SelectBuild<TReturnInfo> As(string alias) {
+			string table = string.Concat(" \r\nFROM ", _dals.FirstOrDefault()?.Table, " ", _mainAlias);
+			if (_table.StartsWith(table)) _table = string.Concat(table, _mainAlias = alias, _table.Substring(table.Length));
 			return this;
 		}
 		protected IDAL ConvertTBLL<TBLL>() {

@@ -4,6 +4,7 @@ using System.Threading;
 using System.Text.RegularExpressions;
 using System.Net;
 using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
 
 namespace CSRedis {
 	/// <summary>
