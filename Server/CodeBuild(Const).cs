@@ -387,7 +387,7 @@ using Newtonsoft.Json;
 using NpgsqlTypes;
 using {0}.Model;
 
-public static partial class ExtensionMethods {{
+public static partial class {0}ExtensionMethods {{
 	public static double Distance(this NpgsqlPoint? that, NpgsqlPoint point) => that?.Distance(point) ?? 0;
 	public static double Distance(this NpgsqlPoint that, NpgsqlPoint point) {{
 		double radLat1 = (double)(that.Y) * Math.PI / 180d;
