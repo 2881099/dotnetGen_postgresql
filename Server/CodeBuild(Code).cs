@@ -157,6 +157,7 @@ namespace Server {
 				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\CSRedis\IRedisClientAsync.cs"), Deflate.Compress(Properties.Resources.CSRedis_IRedisClientAsync_cs)));
 				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\CSRedis\IRedisClientSync.cs"), Deflate.Compress(Properties.Resources.CSRedis_IRedisClientSync_cs)));
 				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\CSRedis\QuickHelperBase.cs"), Deflate.Compress(Properties.Resources.CSRedis_QuickHelperBase_cs)));
+				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\CSRedis\QuickHelperBaseAsync.cs"), Deflate.Compress(Properties.Resources.CSRedis_QuickHelperBaseAsync_cs)));
 				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\CSRedis\RedisClient.Async.cs"), Deflate.Compress(Properties.Resources.CSRedis_RedisClient_Async_cs)));
 				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\CSRedis\RedisClient.cs"), Deflate.Compress(Properties.Resources.CSRedis_RedisClient_cs)));
 				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\CSRedis\RedisClient.Sync.cs"), Deflate.Compress(Properties.Resources.CSRedis_RedisClient_Sync_cs)));
@@ -216,7 +217,9 @@ namespace Server {
 				#region Npgsql
 				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\Npgsql\ConnectionPool.cs"), Deflate.Compress(Properties.Resources.Npgsql_ConnectionPool_cs)));
 				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\Npgsql\Executer.cs"), Deflate.Compress(Properties.Resources.Npgsql_Executer_cs)));
+				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\Npgsql\ExecuterAsync.cs"), Deflate.Compress(Properties.Resources.Npgsql_ExecuterAsync_cs)));
 				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\Npgsql\SelectBuild.cs"), Deflate.Compress(Properties.Resources.Npgsql_SelectBuild_cs)));
+				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\Npgsql\SelectBuildAsync.cs"), Deflate.Compress(Properties.Resources.Npgsql_SelectBuildAsync_cs)));
 				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"Common\Npgsql\NpgsqlTypesConverter.cs"), Deflate.Compress(Properties.Resources.Npgsql_NpgsqlTypesConverter_cs)));
 				clearSb();
 				#endregion
@@ -1449,8 +1452,11 @@ namespace {0}.DAL {{
 					#endregion
 				} else {
 					sb1.AppendFormat(@"
+
+		#region async{1}
+		#endregion
 	}}
-}}", uClass_Name);
+}}", uClass_Name, dal_async_code);
 				}
 				#endregion
 
@@ -1732,6 +1738,10 @@ namespace {0}.BLL {{
 		public static int DeleteBy{2}({0}) {{
 			return dal.DeleteBy{2}({1});
 		}}", fkcsTypeParms, fkcsParms, fkcsBy);
+						bll_async_code = string.Format(@"
+		public static Task<int> DeleteBy{2}Async({0}) {{
+			return dal.DeleteBy{2}Async({1});
+		}}", fkcsTypeParms, fkcsParms, fkcsBy) + bll_async_code;
 						del_exists2.Add(fkcsTypeParms, true);
 					}
 					if (fk.Columns.Count > 1) {

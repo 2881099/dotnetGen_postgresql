@@ -80,29 +80,30 @@ namespace Npgsql {
 					logtxt += $"Open: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
 					logtxt_dt = DateTime.Now;
 				}
-				NpgsqlDataReader dr = cmd.ExecuteReader();
-				if (IsTracePerformance) logtxt += $"ExecuteReader: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
-				while (true) {
-					if (IsTracePerformance) logtxt_dt = DateTime.Now;
-					bool isread = dr.Read();
-					if (IsTracePerformance) logtxt += $"	dr.Read: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
-					if (isread == false) break;
+				using (NpgsqlDataReader dr = cmd.ExecuteReader()) {
+					if (IsTracePerformance) logtxt += $"ExecuteReader: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
+					while (true) {
+						if (IsTracePerformance) logtxt_dt = DateTime.Now;
+						bool isread = dr.Read();
+						if (IsTracePerformance) logtxt += $"	dr.Read: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
+						if (isread == false) break;
 
-					if (readerHander != null) {
-						object[] values = null;
-						if (IsTracePerformance) {
-							logtxt_dt = DateTime.Now;
-							values = new object[dr.FieldCount];
-							dr.GetValues(values);
-							logtxt += $"	dr.GetValues: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
-							logtxt_dt = DateTime.Now;
+						if (readerHander != null) {
+							object[] values = null;
+							if (IsTracePerformance) {
+								logtxt_dt = DateTime.Now;
+								values = new object[dr.FieldCount];
+								dr.GetValues(values);
+								logtxt += $"	dr.GetValues: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
+								logtxt_dt = DateTime.Now;
+							}
+							readerHander(dr);
+							if (IsTracePerformance) logtxt += $"	readerHander: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms ({string.Join(",", values)})\r\n";
 						}
-						readerHander(dr);
-						if (IsTracePerformance) logtxt += $"	readerHander: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms ({string.Join(",", values)})\r\n";
 					}
+					if (IsTracePerformance) logtxt_dt = DateTime.Now;
+					dr.Close();
 				}
-				if (IsTracePerformance) logtxt_dt = DateTime.Now;
-				dr.Dispose();
 				if (IsTracePerformance) logtxt += $"ExecuteReader_dispose: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
 			} catch (Exception ex2) {
 				ex = ex2;

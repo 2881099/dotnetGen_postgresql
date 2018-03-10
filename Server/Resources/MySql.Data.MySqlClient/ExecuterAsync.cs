@@ -1,15 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
-using System.Linq;
-using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
-using NpgsqlTypes;
 
 namespace MySql.Data.MySqlClient {
 	partial class Executer {
@@ -28,29 +20,30 @@ namespace MySql.Data.MySqlClient {
 					logtxt += $"Open: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
 					logtxt_dt = DateTime.Now;
 				}
-				MySqlDataReader dr = await cmd.ExecuteReaderAsync() as MySqlDataReader;
-				if (IsTracePerformance) logtxt += $"ExecuteReader: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
-				while (true) {
-					if (IsTracePerformance) logtxt_dt = DateTime.Now;
-					bool isread = await dr.ReadAsync();
-					if (IsTracePerformance) logtxt += $"	dr.Read: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
-					if (isread == false) break;
+				using (MySqlDataReader dr = await cmd.ExecuteReaderAsync() as MySqlDataReader) {
+					if (IsTracePerformance) logtxt += $"ExecuteReader: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
+					while (true) {
+						if (IsTracePerformance) logtxt_dt = DateTime.Now;
+						bool isread = await dr.ReadAsync();
+						if (IsTracePerformance) logtxt += $"	dr.Read: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
+						if (isread == false) break;
 
-					if (readerHander != null) {
-						object[] values = null;
-						if (IsTracePerformance) {
-							logtxt_dt = DateTime.Now;
-							values = new object[dr.FieldCount];
-							for (int a = 0; a < values.Length; a++) values[a] = await dr.GetFieldValueAsync<object>(a);
-							logtxt += $"	dr.GetValues: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
-							logtxt_dt = DateTime.Now;
+						if (readerHander != null) {
+							object[] values = null;
+							if (IsTracePerformance) {
+								logtxt_dt = DateTime.Now;
+								values = new object[dr.FieldCount];
+								for (int a = 0; a < values.Length; a++) values[a] = await dr.GetFieldValueAsync<object>(a);
+								logtxt += $"	dr.GetValues: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
+								logtxt_dt = DateTime.Now;
+							}
+							await readerHander(dr);
+							if (IsTracePerformance) logtxt += $"	readerHander: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms ({string.Join(",", values)})\r\n";
 						}
-						await readerHander(dr);
-						if (IsTracePerformance) logtxt += $"	readerHander: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms ({string.Join(",", values)})\r\n";
 					}
+					if (IsTracePerformance) logtxt_dt = DateTime.Now;
+					dr.Close();
 				}
-				if (IsTracePerformance) logtxt_dt = DateTime.Now;
-				dr.Dispose();
 				if (IsTracePerformance) logtxt += $"ExecuteReader_dispose: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
 			} catch (Exception ex2) {
 				ex = ex2;
