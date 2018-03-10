@@ -1,10 +1,10 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
-using System.Reflection;
 using System.Data;
 using System.Linq;
-using Newtonsoft.Json;
+using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Npgsql {

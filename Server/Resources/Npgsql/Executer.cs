@@ -1,15 +1,10 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using NpgsqlTypes;
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
-using System.Linq;
-using System.Reflection;
 using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
-using NpgsqlTypes;
 
 namespace Npgsql {
 	public partial class Executer : IDisposable {
@@ -142,7 +137,7 @@ namespace Npgsql {
 			}
 
 			if (pc.Tran == null) this.Pool.ReleaseConnection(pc.Conn);
-			LoggerException(cmd, ex, dt, "");
+			LoggerException(cmd, ex, dt, logtxt);
 			cmd.Parameters.Clear();
 			return val;
 		}
@@ -161,7 +156,7 @@ namespace Npgsql {
 			}
 
 			if (pc.Tran == null) this.Pool.ReleaseConnection(pc.Conn);
-			LoggerException(cmd, ex, dt, "");
+			LoggerException(cmd, ex, dt, logtxt);
 			cmd.Parameters.Clear();
 			return val;
 		}

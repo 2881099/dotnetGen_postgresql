@@ -11,11 +11,11 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NpgsqlTypes;
 
-namespace Npgsql {
+namespace MySql.Data.MySqlClient {
 	partial class Executer {
-		async public Task ExecuteReaderAsync(Func<NpgsqlDataReader, Task> readerHander, CommandType cmdType, string cmdText, params NpgsqlParameter[] cmdParms) {
+		async public Task ExecuteReaderAsync(Func<MySqlDataReader, Task> readerHander, CommandType cmdType, string cmdText, params MySqlParameter[] cmdParms) {
 			DateTime dt = DateTime.Now;
-			NpgsqlCommand cmd = new NpgsqlCommand();
+			MySqlCommand cmd = new MySqlCommand();
 			DateTime logtxt_dt = DateTime.Now;
 			var pc = await PrepareCommandAsync(cmd, cmdType, cmdText, cmdParms);
 			string logtxt = pc.logtxt;
@@ -23,12 +23,12 @@ namespace Npgsql {
 			Exception ex = null;
 			try {
 				if (IsTracePerformance) logtxt_dt = DateTime.Now;
-				if (cmd.Connection.State == ConnectionState.Closed) await cmd.Connection.OpenAsync();
+				if (cmd.Connection.State == ConnectionState.Closed || cmd.Connection.Ping() == false) await cmd.Connection.OpenAsync();
 				if (IsTracePerformance) {
 					logtxt += $"Open: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
 					logtxt_dt = DateTime.Now;
 				}
-				NpgsqlDataReader dr = await cmd.ExecuteReaderAsync() as NpgsqlDataReader;
+				MySqlDataReader dr = await cmd.ExecuteReaderAsync() as MySqlDataReader;
 				if (IsTracePerformance) logtxt += $"ExecuteReader: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms\r\n";
 				while (true) {
 					if (IsTracePerformance) logtxt_dt = DateTime.Now;
@@ -61,7 +61,7 @@ namespace Npgsql {
 			if (IsTracePerformance) logtxt += $"ReleaseConnection: {DateTime.Now.Subtract(logtxt_dt).TotalMilliseconds}ms Total: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms";
 			LoggerException(cmd, ex, dt, logtxt);
 		}
-		async public Task<object[][]> ExeucteArrayAsync(CommandType cmdType, string cmdText, params NpgsqlParameter[] cmdParms) {
+		async public Task<object[][]> ExeucteArrayAsync(CommandType cmdType, string cmdText, params MySqlParameter[] cmdParms) {
 			List<object[]> ret = new List<object[]>();
 			await ExecuteReaderAsync(async dr => {
 				object[] values = new object[dr.FieldCount];
@@ -70,14 +70,14 @@ namespace Npgsql {
 			}, cmdType, cmdText, cmdParms);
 			return ret.ToArray();
 		}
-		async public Task<int> ExecuteNonQueryAsync(CommandType cmdType, string cmdText, params NpgsqlParameter[] cmdParms) {
+		async public Task<int> ExecuteNonQueryAsync(CommandType cmdType, string cmdText, params MySqlParameter[] cmdParms) {
 			DateTime dt = DateTime.Now;
-			NpgsqlCommand cmd = new NpgsqlCommand();
+			MySqlCommand cmd = new MySqlCommand();
 			var pc = await PrepareCommandAsync(cmd, cmdType, cmdText, cmdParms);
 			int val = 0;
 			Exception ex = null;
 			try {
-				if (cmd.Connection.State == ConnectionState.Closed) await cmd.Connection.OpenAsync();
+				if (cmd.Connection.State == ConnectionState.Closed || cmd.Connection.Ping() == false) await cmd.Connection.OpenAsync();
 				val = await cmd.ExecuteNonQueryAsync();
 			} catch (Exception ex2) {
 				ex = ex2;
@@ -88,14 +88,14 @@ namespace Npgsql {
 			cmd.Parameters.Clear();
 			return val;
 		}
-		async public Task<object> ExecuteScalarAsync(CommandType cmdType, string cmdText, params NpgsqlParameter[] cmdParms) {
+		async public Task<object> ExecuteScalarAsync(CommandType cmdType, string cmdText, params MySqlParameter[] cmdParms) {
 			DateTime dt = DateTime.Now;
-			NpgsqlCommand cmd = new NpgsqlCommand();
+			MySqlCommand cmd = new MySqlCommand();
 			var pc = await PrepareCommandAsync(cmd, cmdType, cmdText, cmdParms);
 			object val = null;
 			Exception ex = null;
 			try {
-				if (cmd.Connection.State == ConnectionState.Closed) await cmd.Connection.OpenAsync();
+				if (cmd.Connection.State == ConnectionState.Closed || cmd.Connection.Ping() == false) await cmd.Connection.OpenAsync();
 				val = await cmd.ExecuteScalarAsync();
 			} catch (Exception ex2) {
 				ex = ex2;
@@ -107,21 +107,21 @@ namespace Npgsql {
 			return val;
 		}
 
-		async private Task<(Connection2 conn, string logtxt)> PrepareCommandAsync(NpgsqlCommand cmd, CommandType cmdType, string cmdText, NpgsqlParameter[] cmdParms) {
+		async private Task<(SqlConnection2 conn, string logtxt)> PrepareCommandAsync(MySqlCommand cmd, CommandType cmdType, string cmdText, MySqlParameter[] cmdParms) {
 			string logtxt = "";
 			DateTime dt = DateTime.Now;
 			cmd.CommandType = cmdType;
 			cmd.CommandText = cmdText;
 
 			if (cmdParms != null) {
-				foreach (NpgsqlParameter parm in cmdParms) {
+				foreach (MySqlParameter parm in cmdParms) {
 					if (parm == null) continue;
 					if (parm.Value == null) parm.Value = DBNull.Value;
 					cmd.Parameters.Add(parm);
 				}
 			}
 
-			Connection2 conn = null;
+			SqlConnection2 conn = null;
 			if (IsTracePerformance) logtxt += $"	PrepareCommand_part1: {DateTime.Now.Subtract(dt).TotalMilliseconds}ms cmdParms: {cmdParms.Length}\r\n";
 
 			if (IsTracePerformance) dt = DateTime.Now;

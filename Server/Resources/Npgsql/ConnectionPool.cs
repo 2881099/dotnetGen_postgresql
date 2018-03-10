@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Npgsql {
 	/// <summary>
@@ -13,6 +14,7 @@ namespace Npgsql {
 		public List<Connection2> AllConnections = new List<Connection2>();
 		public Queue<Connection2> FreeConnections = new Queue<Connection2>();
 		public Queue<ManualResetEventSlim> GetConnectionQueue = new Queue<ManualResetEventSlim>();
+		public Queue<TaskCompletionSource<Connection2>> GetConnectionAsyncQueue = new Queue<TaskCompletionSource<Connection2>>();
 		private static object _lock = new object();
 		private static object _lock_GetConnectionQueue = new object();
 		private string _connectionString;
@@ -32,7 +34,7 @@ namespace Npgsql {
 			ConnectionString = connectionString;
 		}
 
-		public Connection2 GetConnection() {
+		private Connection2 GetFreeConnection() {
 			Connection2 conn = null;
 			if (FreeConnections.Count > 0)
 				lock (_lock)
@@ -49,6 +51,10 @@ namespace Npgsql {
 					conn.SqlConnection = new NpgsqlConnection(ConnectionString);
 				}
 			}
+			return conn;
+		}
+		public Connection2 GetConnection() {
+			var conn = GetFreeConnection();
 			if (conn == null) {
 				ManualResetEventSlim wait = new ManualResetEventSlim(false);
 				lock (_lock_GetConnectionQueue)
@@ -63,12 +69,34 @@ namespace Npgsql {
 			return conn;
 		}
 
+		async public Task<Connection2> GetConnectionAsync() {
+			var conn = GetFreeConnection();
+			if (conn == null) {
+				TaskCompletionSource<Connection2> tcs = new TaskCompletionSource<Connection2>();
+				lock (_lock_GetConnectionQueue)
+					GetConnectionAsyncQueue.Enqueue(tcs);
+				conn = await tcs.Task;
+			}
+			conn.ThreadId = Thread.CurrentThread.ManagedThreadId;
+			conn.LastActive = DateTime.Now;
+			Interlocked.Increment(ref conn.UseSum);
+			return conn;
+		}
+
 		public void ReleaseConnection(Connection2 conn) {
 			conn.SqlConnection.Close();
 			lock (_lock)
 				FreeConnections.Enqueue(conn);
 
-			if (GetConnectionQueue.Count > 0) {
+			bool isAsync = false;
+			if (GetConnectionAsyncQueue.Count > 0) {
+				TaskCompletionSource<Connection2> tcs = null;
+				lock (_lock_GetConnectionQueue)
+					if (GetConnectionAsyncQueue.Count > 0)
+						tcs = GetConnectionAsyncQueue.Dequeue();
+				if (isAsync = (tcs != null)) tcs.SetResult(GetConnectionAsync().Result);
+			}
+			if (isAsync == false && GetConnectionQueue.Count > 0) {
 				ManualResetEventSlim wait = null;
 				lock (_lock_GetConnectionQueue)
 					if (GetConnectionQueue.Count > 0)
