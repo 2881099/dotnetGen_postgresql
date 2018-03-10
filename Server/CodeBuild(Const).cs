@@ -347,10 +347,10 @@ namespace {0}.BLL {{
 			pass = cfg[""ConnectionStrings:redis:pass""];
 			Name = cfg[""ConnectionStrings:redis:name""];
 			Instance = new CSRedis.ConnectionPool(ip, port, poolsize);
-			Instance.Connected += async (s, o) => {{
+			Instance.Connected += (s, o) => {{
 				CSRedis.RedisClient rc = s as CSRedis.RedisClient;
-				if (!string.IsNullOrEmpty(pass)) await rc.AuthAsync(pass);
-				if (database > 0) await rc.SelectAsync(database);
+				if (!string.IsNullOrEmpty(pass)) rc.Auth(pass);
+				if (database > 0) rc.Select(database);
 			}};
 		}}
 	}}
@@ -371,12 +371,13 @@ namespace {0}.BLL {{
 	//		Instance = new StackExchange.Redis.ConnectionMultiplexerPool($""{{ip}}:{{port}},password={{pass}},name={{Name}},defaultdatabase={{database}}"", poolsize);
 	//	}}
 	//}}
+}}
 
-	public static partial class BLLExtensionMethods {{
-		public static List<TReturnInfo> ToList<TReturnInfo>(this SelectBuild<TReturnInfo> select, int expireSeconds, string cacheKey = null) {{ return select.ToList(RedisHelper.Get, RedisHelper.Set, TimeSpan.FromSeconds(expireSeconds), cacheKey); }}
-		public static Task<List<TReturnInfo>> ToListAsync<TReturnInfo>(this SelectBuild<TReturnInfo> select, int expireSeconds, string cacheKey = null) {{ return select.ToListAsync(RedisHelper.GetAsync, RedisHelper.SetAsync, TimeSpan.FromSeconds(expireSeconds), cacheKey); }}
-	}}
-}}";
+public static partial class {0}BLLExtensionMethods {{
+	public static List<TReturnInfo> ToList<TReturnInfo>(this SelectBuild<TReturnInfo> select, int expireSeconds, string cacheKey = null) {{ return select.ToList({0}.BLL.RedisHelper.Get, {0}.BLL.RedisHelper.Set, TimeSpan.FromSeconds(expireSeconds), cacheKey); }}
+	public static Task<List<TReturnInfo>> ToListAsync<TReturnInfo>(this SelectBuild<TReturnInfo> select, int expireSeconds, string cacheKey = null) {{ return select.ToListAsync({0}.BLL.RedisHelper.GetAsync, {0}.BLL.RedisHelper.SetAsync, TimeSpan.FromSeconds(expireSeconds), cacheKey); }}
+}}
+";
 			#endregion
 			public static readonly string Model_Build__ExtensionMethods_cs =
 			#region 内容太长已被收起
