@@ -8,7 +8,7 @@ using System.Collections;
 namespace Server {
 
 	internal partial class CodeBuild {
-		protected static NpgsqlDbType GetDBType(string strType, string typtype) {
+		protected NpgsqlDbType GetDBType(string strType, string typtype) {
 			if (typtype == "c") return NpgsqlDbType.Composite;
 			if (typtype == "e") return NpgsqlDbType.Enum;
 			switch (strType.ToLower().TrimStart('_')) {
@@ -65,7 +65,7 @@ namespace Server {
 			}
 		}
 
-		protected static string GetCSTypeValue(NpgsqlDbType type) {
+		protected string GetCSTypeValue(NpgsqlDbType type) {
 			switch (type) {
 				case NpgsqlDbType.Smallint: 
 				case NpgsqlDbType.Integer: 
@@ -121,7 +121,7 @@ namespace Server {
 				default: return "";
 			}
 		}
-		protected static string GetCSType(NpgsqlDbType type, int attndims, string enumType) {
+		protected string GetCSType(NpgsqlDbType type, int attndims, string enumType) {
 			if (enumType == "hstore") enumType = "Dictionary<string, string>";
 			string arr = "";
 			for (int a = 1; a < attndims; a++) arr = arr + ",";
@@ -160,7 +160,7 @@ namespace Server {
 				case NpgsqlDbType.Polygon: return string.Format(arr, "NpgsqlPolygon" + (attndims > 0 ? "" : "?"));
 				case NpgsqlDbType.Circle: return string.Format(arr, "NpgsqlCircle" + (attndims > 0 ? "" : "?"));
 
-				case NpgsqlDbType.Cidr: return string.Format(arr, "NpgsqlInet" + (attndims > 0 ? "" : "?"));
+				case NpgsqlDbType.Cidr: return string.Format(arr, "(IPAddress Address, int Subnet)" + (attndims > 0 ? "" : "?"));
 				case NpgsqlDbType.Inet: return string.Format(arr, "IPAddress");
 				case NpgsqlDbType.MacAddr: return string.Format(arr, "PhysicalAddress");
 
@@ -183,7 +183,7 @@ namespace Server {
 			}
 		}
 
-		protected static string GetDataReaderMethod(NpgsqlDbType type, string csType) {
+		protected string GetDataReaderMethod(NpgsqlDbType type, string csType) {
 			if (csType == "byte[]") return "dr.GetFieldValue<byte[]>(dataIndex)";
 			if (csType.EndsWith("]")) return "dr.GetFieldValue<object>(dataIndex) as " + csType.Replace("?", "");
 			switch (type) {
@@ -219,7 +219,7 @@ namespace Server {
 				case NpgsqlDbType.Polygon: return "dr.GetFieldValue<NpgsqlPolygon>(dataIndex)";
 				case NpgsqlDbType.Circle: return "dr.GetFieldValue<NpgsqlCircle>(dataIndex)";
 
-				case NpgsqlDbType.Cidr: return "dr.GetFieldValue<NpgsqlInet>(dataIndex)";
+				case NpgsqlDbType.Cidr: return "dr.GetFieldValue<(IPAddress, int)>(dataIndex)";
 				case NpgsqlDbType.Inet: return "dr.GetFieldValue<IPAddress>(dataIndex)";
 				case NpgsqlDbType.MacAddr: return "dr.GetFieldValue<PhysicalAddress>(dataIndex)";
 
@@ -242,7 +242,7 @@ namespace Server {
 			}
 		}
 
-		protected static string GetDataReaderMethodAsync(NpgsqlDbType type, string csType) {
+		protected string GetDataReaderMethodAsync(NpgsqlDbType type, string csType) {
 			if (csType == "byte[]") return "await dr.GetFieldValueAsync<byte[]>(dataIndex)";
 			if (csType.EndsWith("]")) return "await dr.GetFieldValueAsync<object>(dataIndex) as " + csType.Replace("?", "");
 			switch (type) {
@@ -278,7 +278,7 @@ namespace Server {
 				case NpgsqlDbType.Polygon: return "await dr.GetFieldValueAsync<NpgsqlPolygon>(dataIndex)";
 				case NpgsqlDbType.Circle: return "await dr.GetFieldValueAsync<NpgsqlCircle>(dataIndex)";
 
-				case NpgsqlDbType.Cidr: return "await dr.GetFieldValueAsync<NpgsqlInet>(dataIndex)";
+				case NpgsqlDbType.Cidr: return "await dr.GetFieldValueAsync<(IPAddress, int)>(dataIndex)";
 				case NpgsqlDbType.Inet: return "await dr.GetFieldValueAsync<IPAddress>(dataIndex)";
 				case NpgsqlDbType.MacAddr: return "await dr.GetFieldValueAsync<PhysicalAddress>(dataIndex)";
 
@@ -300,7 +300,7 @@ namespace Server {
 				default: return "await dr.GetFieldValueAsync<object>(dataIndex)";
 			}
 		}
-		protected static string GetObjectConvertToCsTypeMethod(NpgsqlDbType type, string csType) {
+		protected string GetObjectConvertToCsTypeMethod(NpgsqlDbType type, string csType) {
 			if (csType == "byte[]" || csType.EndsWith("]")) return "{0} as " + csType;
 			switch (type) {
 				case NpgsqlDbType.Smallint: return "(short){0}";
@@ -335,7 +335,7 @@ namespace Server {
 				case NpgsqlDbType.Polygon: return "(NpgsqlPolygon){0}";
 				case NpgsqlDbType.Circle: return "(NpgsqlCircle){0}";
 
-				case NpgsqlDbType.Cidr: return "(NpgsqlInet){0}";
+				case NpgsqlDbType.Cidr: return "((IPAddress, int)){0}";
 				case NpgsqlDbType.Inet: return "(IPAddress){0}";
 				case NpgsqlDbType.MacAddr: return "{0} as PhysicalAddress";
 
@@ -358,7 +358,7 @@ namespace Server {
 			}
 		}
 
-		protected static string GetToStringFieldConcat(ColumnInfo columnInfo, string csType) {
+		protected string GetToStringFieldConcat(ColumnInfo columnInfo, string csType) {
 			switch (columnInfo.Type) {
 				case NpgsqlDbType.Smallint:
 				case NpgsqlDbType.Integer:
@@ -366,23 +366,23 @@ namespace Server {
 				case NpgsqlDbType.Numeric:
 				case NpgsqlDbType.Real:
 				case NpgsqlDbType.Double:
-				case NpgsqlDbType.Money: return string.Format("{0} == null ? \"null\" : {0}.ToString()", CodeBuild.UFString(columnInfo.Name));
+				case NpgsqlDbType.Money: return string.Format("{0} == null ? \"null\" : {0}.ToString()", UFString(columnInfo.Name));
 
 				case NpgsqlDbType.Char:
 				case NpgsqlDbType.Varchar:
-				case NpgsqlDbType.Text: return string.Format("{0} == null ? \"null\" : string.Format(\"'{{0}}'\", {0}.Replace(\"\\\\\", \"\\\\\\\\\").Replace(\"\\r\\n\", \"\\\\r\\\\n\").Replace(\"'\", \"\\\\'\"))", CodeBuild.UFString(columnInfo.Name));
+				case NpgsqlDbType.Text: return string.Format("{0} == null ? \"null\" : string.Format(\"'{{0}}'\", {0}.Replace(\"\\\\\", \"\\\\\\\\\").Replace(\"\\r\\n\", \"\\\\r\\\\n\").Replace(\"'\", \"\\\\'\"))", UFString(columnInfo.Name));
 
 				case NpgsqlDbType.Timestamp:
 				case NpgsqlDbType.TimestampTZ:
-				case NpgsqlDbType.Date: return string.Format("{0} == null ? \"null\" : {0}.Value.Subtract(new DateTime(1970, 1, 1)).TotalMilliseconds.ToString()", CodeBuild.UFString(columnInfo.Name));
+				case NpgsqlDbType.Date: return string.Format("{0} == null ? \"null\" : {0}.Value.Subtract(new DateTime(1970, 1, 1)).TotalMilliseconds.ToString()", UFString(columnInfo.Name));
 				case NpgsqlDbType.Time:
 				case NpgsqlDbType.TimeTZ:
-				case NpgsqlDbType.Interval: return string.Format("{0} == null ? \"null\" : {0}.Value.TotalMilliseconds.ToString()", CodeBuild.UFString(columnInfo.Name));
+				case NpgsqlDbType.Interval: return string.Format("{0} == null ? \"null\" : {0}.Value.TotalMilliseconds.ToString()", UFString(columnInfo.Name));
 
-				case NpgsqlDbType.Boolean: return string.Format("{0} == null ? \"null\" : ({0} == true ? \"true\" : \"false\")", CodeBuild.UFString(columnInfo.Name));
-				case NpgsqlDbType.Bytea: return string.Format("{0} == null ? \"null\" : Convert.ToBase64String({0})", CodeBuild.UFString(columnInfo.Name));
+				case NpgsqlDbType.Boolean: return string.Format("{0} == null ? \"null\" : ({0} == true ? \"true\" : \"false\")", UFString(columnInfo.Name));
+				case NpgsqlDbType.Bytea: return string.Format("{0} == null ? \"null\" : Convert.ToBase64String({0})", UFString(columnInfo.Name));
 				case NpgsqlDbType.Bit:
-				case NpgsqlDbType.Varbit: return string.Format("{0} == null ? \"null\" : string.Format(\"'{{0}}'\", {0}.To1010())", CodeBuild.UFString(columnInfo.Name));
+				case NpgsqlDbType.Varbit: return string.Format("{0} == null ? \"null\" : string.Format(\"'{{0}}'\", {0}.To1010())", UFString(columnInfo.Name));
 
 				case NpgsqlDbType.Point:
 				case NpgsqlDbType.Line:
@@ -394,28 +394,28 @@ namespace Server {
 
 				case NpgsqlDbType.Cidr:
 				case NpgsqlDbType.Inet:
-				case NpgsqlDbType.MacAddr: return string.Format("{0} == null ? \"null\" : {0}.ToString()", CodeBuild.UFString(columnInfo.Name));
+				case NpgsqlDbType.MacAddr: return string.Format("{0} == null ? \"null\" : {0}.ToString()", UFString(columnInfo.Name));
 
 				case NpgsqlDbType.Json:
 				case NpgsqlDbType.Jsonb:
-				case NpgsqlDbType.Uuid: return string.Format("{0} == null ? \"null\" : {0}.ToString()", CodeBuild.UFString(columnInfo.Name));
+				case NpgsqlDbType.Uuid: return string.Format("{0} == null ? \"null\" : {0}.ToString()", UFString(columnInfo.Name));
 
 				case NpgsqlDbType.IntegerRange:
 				case NpgsqlDbType.BigintRange:
 				case NpgsqlDbType.NumericRange:
 				case NpgsqlDbType.TimestampRange:
 				case NpgsqlDbType.TimestampTZRange:
-				case NpgsqlDbType.DateRange: return string.Format("{0} == null ? \"null\" : {0}.ToString()", CodeBuild.UFString(columnInfo.Name));
+				case NpgsqlDbType.DateRange: return string.Format("{0} == null ? \"null\" : {0}.ToString()", UFString(columnInfo.Name));
 
 				case NpgsqlDbType.Hstore:
 				case NpgsqlDbType.Geometry:
 				case NpgsqlDbType.Enum:
 				case NpgsqlDbType.Composite:
-				default: return string.Format("{0} == null ? \"null\" : {0}.ToString()", CodeBuild.UFString(columnInfo.Name));
+				default: return string.Format("{0} == null ? \"null\" : {0}.ToString()", UFString(columnInfo.Name));
 			}
 		}
 
-		protected static string GetToStringStringify(ColumnInfo columnInfo)
+		protected string GetToStringStringify(ColumnInfo columnInfo)
         {
             switch (columnInfo.Type)
             {
@@ -425,23 +425,23 @@ namespace Server {
 				case NpgsqlDbType.Numeric:
 				case NpgsqlDbType.Real:
 				case NpgsqlDbType.Double:
-				case NpgsqlDbType.Money: return "_" + CodeBuild.UFString(columnInfo.Name) + " == null ? \"null\" : _" + CodeBuild.UFString(columnInfo.Name) + ".ToString()";
+				case NpgsqlDbType.Money: return "_" + UFString(columnInfo.Name) + " == null ? \"null\" : _" + UFString(columnInfo.Name) + ".ToString()";
 
 				case NpgsqlDbType.Char:
 				case NpgsqlDbType.Varchar:
-				case NpgsqlDbType.Text: return "_" + CodeBuild.UFString(columnInfo.Name) + " == null ? \"null\" : _" + CodeBuild.UFString(columnInfo.Name) + ".Replace(\"|\", StringifySplit)";
+				case NpgsqlDbType.Text: return "_" + UFString(columnInfo.Name) + " == null ? \"null\" : _" + UFString(columnInfo.Name) + ".Replace(\"|\", StringifySplit)";
 
 				case NpgsqlDbType.Timestamp:
 				case NpgsqlDbType.TimestampTZ:
 				case NpgsqlDbType.Date:
 				case NpgsqlDbType.Time:
 				case NpgsqlDbType.TimeTZ:
-				case NpgsqlDbType.Interval: return "_" + CodeBuild.UFString(columnInfo.Name) + " == null ? \"null\" : _" + CodeBuild.UFString(columnInfo.Name) + ".Value.Ticks.ToString()";
+				case NpgsqlDbType.Interval: return "_" + UFString(columnInfo.Name) + " == null ? \"null\" : _" + UFString(columnInfo.Name) + ".Value.Ticks.ToString()";
 
-				case NpgsqlDbType.Boolean: return "_" + CodeBuild.UFString(columnInfo.Name) + " == null ? \"null\" : (_" + CodeBuild.UFString(columnInfo.Name) + " == true ? \"1\" : \"0\")";
-				case NpgsqlDbType.Bytea: return "_" + CodeBuild.UFString(columnInfo.Name) + " == null ? \"null\" : Convert.ToBase64String(_" + CodeBuild.UFString(columnInfo.Name) + ")";
+				case NpgsqlDbType.Boolean: return "_" + UFString(columnInfo.Name) + " == null ? \"null\" : (_" + UFString(columnInfo.Name) + " == true ? \"1\" : \"0\")";
+				case NpgsqlDbType.Bytea: return "_" + UFString(columnInfo.Name) + " == null ? \"null\" : Convert.ToBase64String(_" + UFString(columnInfo.Name) + ")";
 				case NpgsqlDbType.Bit:
-				case NpgsqlDbType.Varbit: return string.Format("{0} == null ? \"null\" : {0}.To1010()", CodeBuild.UFString(columnInfo.Name));
+				case NpgsqlDbType.Varbit: return string.Format("{0} == null ? \"null\" : {0}.To1010()", UFString(columnInfo.Name));
 
 				case NpgsqlDbType.Point:
 				case NpgsqlDbType.Line:
@@ -453,27 +453,27 @@ namespace Server {
 
 				case NpgsqlDbType.Cidr:
 				case NpgsqlDbType.Inet:
-				case NpgsqlDbType.MacAddr: return string.Format("{0} == null ? \"null\" : {0}.ToString()", CodeBuild.UFString(columnInfo.Name));
+				case NpgsqlDbType.MacAddr: return string.Format("{0} == null ? \"null\" : {0}.ToString()", UFString(columnInfo.Name));
 
 				case NpgsqlDbType.Json:
 				case NpgsqlDbType.Jsonb:
-				case NpgsqlDbType.Uuid: return string.Format("{0} == null ? \"null\" : {0}.ToString()", CodeBuild.UFString(columnInfo.Name));
+				case NpgsqlDbType.Uuid: return string.Format("{0} == null ? \"null\" : {0}.ToString()", UFString(columnInfo.Name));
 
 				case NpgsqlDbType.IntegerRange:
 				case NpgsqlDbType.BigintRange:
 				case NpgsqlDbType.NumericRange:
 				case NpgsqlDbType.TimestampRange:
 				case NpgsqlDbType.TimestampTZRange:
-				case NpgsqlDbType.DateRange: return string.Format("{0} == null ? \"null\" : {0}.ToString()", CodeBuild.UFString(columnInfo.Name));
+				case NpgsqlDbType.DateRange: return string.Format("{0} == null ? \"null\" : {0}.ToString()", UFString(columnInfo.Name));
 
 				case NpgsqlDbType.Hstore:
 				case NpgsqlDbType.Geometry:
 				case NpgsqlDbType.Enum:
 				case NpgsqlDbType.Composite:
-				default: return "_" + CodeBuild.UFString(columnInfo.Name) + " == null ? \"null\" : _" + CodeBuild.UFString(columnInfo.Name) + ".ToString().Replace(\"|\", StringifySplit)";
+				default: return "_" + UFString(columnInfo.Name) + " == null ? \"null\" : _" + UFString(columnInfo.Name) + ".ToString().Replace(\"|\", StringifySplit)";
 			}
         }
-        protected static string GetStringifyParse(NpgsqlDbType type, string enumType)
+        protected string GetStringifyParse(NpgsqlDbType type, string enumType)
         {
 			switch (type)
             {
@@ -509,7 +509,7 @@ namespace Server {
 				case NpgsqlDbType.Polygon: return "NpgsqlPolygon.Parse({0})";
 				case NpgsqlDbType.Circle: return "NpgsqlCircle.Parse({0})";
 
-				case NpgsqlDbType.Cidr: return "new NpgsqlInet({0})";
+				case NpgsqlDbType.Cidr: return "(IPAddress, int)({0})";
 				case NpgsqlDbType.Inet: return "IPAddress.Parse({0})";
 				case NpgsqlDbType.MacAddr: return "PhysicalAddress.Parse({0})";
 
@@ -530,7 +530,7 @@ namespace Server {
             }
         }
 
-		protected static string AppendParameter(ColumnInfo col, string value, string place) {
+		protected string AppendParameter(ColumnInfo col, string value, string place) {
 			if (col == null) return "";
 			string type = "";
 			string type2 = "";
@@ -585,18 +585,23 @@ namespace Server {
 				case NpgsqlDbType.DateRange: type += " | NpgsqlDbType.Range | NpgsqlDbType.Date"; break;
 
 				case NpgsqlDbType.Enum:
-				case NpgsqlDbType.Composite: type += " | NpgsqlDbType." + col.Type.ToString(); type2 = "SpecificType = typeof(" + Regex.Replace(col.CsType.Replace("?", ""), @"\[\,*\]", "") + "), "; break;
+				case NpgsqlDbType.Composite:
+					string DataTypeName = "";
+					dic_globalnpgtypes.TryGetValue(col.SqlType, out DataTypeName);
+					return place + string.Format("new NpgsqlParameter {{ ParameterName = \"{0}\", DataTypeName = \"{1}\", Value = {2} }}, \r\n",
+				col.Name, DataTypeName + (col.Attndims > 0 ? "[]" : ""), value + UFString(col.Name));
+					//break;
 
 				case NpgsqlDbType.Hstore:
 				case NpgsqlDbType.Geometry:
 				default: type += " | NpgsqlDbType." + col.Type.ToString(); break;
 			}
-			string returnValue = place + string.Format("new NpgsqlParameter(\"{0}\", {1}, {2}) {{ {4}Value = {3} }}, \r\n",
-				col.Name, type.Substring(3), col.Length, value + CodeBuild.UFString(col.Name), type2);
+			string returnValue = place + string.Format("new NpgsqlParameter(\"{0}\", {1}, {2}) {{ Value = {3} }}, \r\n",
+				col.Name, type.Substring(3), col.Length, value + UFString(col.Name), type2);
 
 			return returnValue;
 		}
-		protected static string AppendParameters(List<ColumnInfo> columnInfos, string value, string place) {
+		protected string AppendParameters(List<ColumnInfo> columnInfos, string value, string place) {
 			string returnValue = "";
 
 			foreach (ColumnInfo columnInfo in columnInfos) {
@@ -604,28 +609,28 @@ namespace Server {
 			}
 			return returnValue == "" ? "" : returnValue.Substring(0, returnValue.Length - 4);
 		}
-		protected static string AppendParameters(List<ColumnInfo> columnInfos, string place) {
+		protected string AppendParameters(List<ColumnInfo> columnInfos, string place) {
 			return AppendParameters(columnInfos, "", place);
 		}
-		protected static string AppendParameters(TableInfo table, string place) {
+		protected string AppendParameters(TableInfo table, string place) {
 			return AppendParameters(table.Columns, "item.", place);
 		}
-		protected static string AppendParameters(ColumnInfo columnInfo, string place) {
+		protected string AppendParameters(ColumnInfo columnInfo, string place) {
 			string returnValue = AppendParameter(columnInfo, "", place);
 			return returnValue == "" ? "" : returnValue.Substring(0, returnValue.Length - 4);
 		}
 
-		protected static string UFString(string text) {
+		protected string UFString(string text) {
 			if (text.Length <= 1) return text.ToUpper();
 			else return text.Substring(0, 1).ToUpper() + text.Substring(1, text.Length - 1);
 		}
 
-		protected static string LFString(string text) {
+		protected string LFString(string text) {
 			if (text.Length <= 1) return text.ToLower();
 			else return text.Substring(0, 1).ToLower() + text.Substring(1, text.Length - 1);
 		}
 
-		protected static string GetCSName(string name) {
+		protected string GetCSName(string name) {
 			name = Regex.Replace(name.TrimStart('@'), @"[^\w]", "_");
 			return char.IsLetter(name, 0) ? name : string.Concat("_", name);
 		}

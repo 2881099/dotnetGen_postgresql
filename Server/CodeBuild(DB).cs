@@ -158,12 +158,12 @@ where ns.nspname || '.' || c.relname in ({0})
 					if (attndims == 0) attndims++;
 				}
 				if (sqlType.StartsWith("_")) sqlType = sqlType.Substring(1);
-				NpgsqlDbType dbtype = CodeBuild.GetDBType(type, typtype);
+				NpgsqlDbType dbtype = GetDBType(type, typtype);
 				string csType2 =
 						dbtype == NpgsqlDbType.Composite ? UFString((owner == "public" ? sqlType : (owner + "_" + sqlType)) + "TYPE") :
 						dbtype == NpgsqlDbType.Enum ? UFString((owner == "public" ? sqlType : (owner + "_" + sqlType)) + "ENUM") : sqlType;
 				loc3[table_id].Add(column, new ColumnInfo(
-					column, dbtype, max_length, csType2, CodeBuild.GetCSType(dbtype, attndims, csType2),
+					column, dbtype, max_length, csType2, GetCSType(dbtype, attndims, csType2),
 					DataSort.ASC, is_nullable, is_identity, false, false, attndims, attnum));
 				if (!_column_coments.ContainsKey(table_id)) _column_coments.Add(table_id, new Dictionary<string, string>());
 				if (!_column_coments[table_id].ContainsKey(column)) _column_coments[table_id].Add(column, comment);

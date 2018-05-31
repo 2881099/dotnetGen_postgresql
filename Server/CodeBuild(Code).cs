@@ -16,12 +16,14 @@ namespace Server {
 			}
 		}
 
+		protected Dictionary<string, string> dic_globalnpgtypes = new Dictionary<string, string>();
 		public List<BuildInfo> Build(string solutionName, bool isSolution, bool isMakeAdmin, bool isDownloadRes) {
+			dic_globalnpgtypes.Clear();
 			Logger.remotor.Info("Build: " + solutionName + ",isSolution: " + isSolution + ",isMakeAdmin: " + isMakeAdmin + ",isDownloadRes: " + isDownloadRes + "(" + _client.Server + "," + _client.Username + "," + _client.Password + "," + _client.Database + ")");
 			List<BuildInfo> loc1 = new List<BuildInfo>();
 
-			//solutionName = CodeBuild.UFString(solutionName);
-			string dbName = CodeBuild.UFString(CodeBuild.GetCSName(_client.Database));
+			//solutionName = UFString(solutionName);
+			string dbName = UFString(GetCSName(_client.Database));
 			string connectionStringName = _client.Database + "ConnectionString";
 			string basicName = "Build";
 
@@ -354,7 +356,10 @@ where a.typtype = 'e' and ns.nspname in ('{0}')", string.Join("','", owners.ToAr
 				if (isFirst) {
 					_types[dr1] += " = 1";
 					PSqlHelperMapTypeGlobally += string.Format(@"
-			NpgsqlConnection.MapEnumGlobally<Model.{0}ENUM>(""{1}"", nameTranslator);", dr1, dr[0]);
+			NpgsqlConnection.GlobalTypeMapper.MapEnum<Model.{0}ENUM>(""{1}"", nameTranslator);", dr1, dr[0]);
+					string dic_globalnpgtypes_key = string.Format("{0}ENUM", dr1);
+					if (!dic_globalnpgtypes.ContainsKey(dic_globalnpgtypes_key)) dic_globalnpgtypes.Add(dic_globalnpgtypes_key, "");
+					dic_globalnpgtypes[dic_globalnpgtypes_key] = string.Concat(dr[0]);
 				}
 			}
 			string code = string.Format(@"using System;
@@ -427,7 +432,10 @@ and ns.nspname in ('{0}')", string.Join("','", owners.ToArray()));
 
 				if (isFirst) {
 					PSqlHelperMapTypeGlobally += string.Format(@"
-			NpgsqlConnection.MapCompositeGlobally<Model.{0}TYPE>(""{1}"");", dr1, dr[0]);
+			NpgsqlConnection.GlobalTypeMapper.MapComposite<Model.{0}TYPE>(""{1}"");", dr1, dr[0]);
+					string dic_globalnpgtypes_key = string.Format("{0}TYPE", dr1);
+					if (!dic_globalnpgtypes.ContainsKey(dic_globalnpgtypes_key)) dic_globalnpgtypes.Add(dic_globalnpgtypes_key, "");
+					dic_globalnpgtypes[dic_globalnpgtypes_key] = string.Concat(dr[0]);
 				}
 			}
 			code = string.Format(@"using System;
@@ -460,7 +468,7 @@ namespace {0}.Model {{
 				if (table.Columns.Count == 0) continue;
 
 				#region commom variable define
-				string uClass_Name = CodeBuild.UFString(table.ClassName);
+				string uClass_Name = UFString(table.ClassName);
 				string nClass_Name = table.ClassName;
 				string nTable_Name = string.Concat(string.IsNullOrEmpty(table.Owner) ? string.Empty : string.Concat(@"""""", table.Owner, @"""""."), @"""""", table.Name, @"""""");
 				string Class_Name_BLL_Full = string.Format(@"{0}.BLL.{1}", solutionName, uClass_Name);
@@ -490,13 +498,13 @@ namespace {0}.Model {{
 				int pkSqlParamFormat_idx = -1;
 				if (table.PrimaryKeys.Count > 0) {
 					foreach (ColumnInfo columnInfo in table.PrimaryKeys) {
-						pkCsParam += columnInfo.CsType + " " + CodeBuild.UFString(columnInfo.Name) + ", ";
-						pkCsParamNoType += CodeBuild.UFString(columnInfo.Name) + ", ";
-						pkCsParamNoTypeByval += string.Format(GetCSTypeValue(columnInfo.Type), CodeBuild.UFString(columnInfo.Name)) + ", ";
+						pkCsParam += columnInfo.CsType + " " + UFString(columnInfo.Name) + ", ";
+						pkCsParamNoType += UFString(columnInfo.Name) + ", ";
+						pkCsParamNoTypeByval += string.Format(GetCSTypeValue(columnInfo.Type), UFString(columnInfo.Name)) + ", ";
 						pkSqlParamFormat += @"""""" + columnInfo.Name + @""""" = {" + ++pkSqlParamFormat_idx + "} AND ";
 						pkSqlParam += @"""""" + columnInfo.Name + @""""" = ?" + columnInfo.Name + " AND ";
-						pkEvalsQuerystring += string.Format("{0}=<%# Eval(\"{0}\") %>&", CodeBuild.UFString(columnInfo.Name));
-						pkMvcRoute += "{" + CodeBuild.UFString(columnInfo.Name) + "}/";
+						pkEvalsQuerystring += string.Format("{0}=<%# Eval(\"{0}\") %>&", UFString(columnInfo.Name));
+						pkMvcRoute += "{" + UFString(columnInfo.Name) + "}/";
 					}
 					pkCsParam = pkCsParam.Substring(0, pkCsParam.Length - 2);
 					pkCsParamNoType = pkCsParamNoType.Substring(0, pkCsParamNoType.Length - 2);
@@ -506,8 +514,8 @@ namespace {0}.Model {{
 					pkEvalsQuerystring = pkEvalsQuerystring.Substring(0, pkEvalsQuerystring.Length - 1);
 				}
 				foreach (ColumnInfo columnInfo in table.Columns) {
-					CsParam1 += columnInfo.CsType + " " + CodeBuild.UFString(columnInfo.Name) + ", ";
-					CsParamNoType1 += CodeBuild.UFString(columnInfo.Name) + ", ";
+					CsParam1 += columnInfo.CsType + " " + UFString(columnInfo.Name) + ", ";
+					CsParamNoType1 += UFString(columnInfo.Name) + ", ";
 					csItemAllFieldCopy += string.Format(@"
 			item.{0} = newitem.{0};", UFString(columnInfo.Name));
 					if (columnInfo.IsIdentity) {
@@ -515,8 +523,8 @@ namespace {0}.Model {{
 					} else if (columnInfo.IsPrimaryKey && columnInfo.CsType == "Guid?" && table.PrimaryKeys.Count == 1) {
 
 					} else {
-						CsParam2 += columnInfo.CsType + " " + CodeBuild.UFString(columnInfo.Name) + ", ";
-						CsParamNoType2 += string.Format("\r\n				{0} = {0}, ", CodeBuild.UFString(columnInfo.Name));
+						CsParam2 += columnInfo.CsType + " " + UFString(columnInfo.Name) + ", ";
+						CsParamNoType2 += string.Format("\r\n				{0} = {0}, ", UFString(columnInfo.Name));
 					}
 				}
 				CsParam1 = CsParam1.Substring(0, CsParam1.Length - 2);
@@ -550,7 +558,7 @@ namespace {0}.Model {{
 					column_idx++;
 					string csType = column.CsType;
 					string nColumn_Name = column.Name;
-					string uColumn_Name = CodeBuild.UFString(column.Name);
+					string uColumn_Name = UFString(column.Name);
 					string comment = _column_coments[table.FullName][column.Name];
 					string prototype_comment = comment == column.Name ? "" : string.Format(@"/// <summary>
 		/// {0}
@@ -570,30 +578,30 @@ namespace {0}.Model {{
 						string fkcsIfNull = string.Empty;
 						ColumnInfo fkc = fk.Columns.Find(delegate (ColumnInfo c1) {
 							fkc1idx++;
-							fkcsParms += string.Format(GetCSTypeValue(c1.Type), "_" + CodeBuild.UFString(c1.Name)) + ", ";
-							fkcsIfNull += " && _" + CodeBuild.UFString(c1.Name) + " != null";
+							fkcsParms += string.Format(GetCSTypeValue(c1.Type), "_" + UFString(c1.Name)) + ", ";
+							fkcsIfNull += " && _" + UFString(c1.Name) + " != null";
 							return c1.Name == column.Name;
 						});
 						if (fk.ReferencedTable != null) {
 							fk.ReferencedColumns.ForEach(delegate (ColumnInfo c1) {
-								fkcsBy += CodeBuild.UFString(c1.Name) + "And";
+								fkcsBy += UFString(c1.Name) + "And";
 							});
 						} else {
 							fk.ReferencedColumnNames.ForEach(delegate (string c1) {
-								fkcsBy += CodeBuild.UFString(c1) + "And";
+								fkcsBy += UFString(c1) + "And";
 							});
 						}
 						if (fkc == null) return false;
-						string FK_uClass_Name = fk.ReferencedTable != null ? CodeBuild.UFString(fk.ReferencedTable.ClassName) :
-							CodeBuild.UFString(TableInfo.GetClassName(fk.ReferencedTableName));
+						string FK_uClass_Name = fk.ReferencedTable != null ? UFString(fk.ReferencedTable.ClassName) :
+							UFString(TableInfo.GetClassName(fk.ReferencedTableName));
 						string FK_uClass_Name_full = fk.ReferencedTable != null ? FK_uClass_Name :
 							string.Format(@"{0}.Model.{1}", solutionName, FK_uClass_Name);
-						string FK_uEntry_Name = fk.ReferencedTable != null ? CodeBuild.GetCSName(fk.ReferencedTable.Name) :
-							CodeBuild.GetCSName(TableInfo.GetEntryName(fk.ReferencedTableName));
+						string FK_uEntry_Name = fk.ReferencedTable != null ? GetCSName(fk.ReferencedTable.Name) :
+							GetCSName(TableInfo.GetEntryName(fk.ReferencedTableName));
 						string tableNamefe3 = fk.ReferencedTable != null ? fk.ReferencedTable.Name : FK_uEntry_Name;
-						string memberName = fk.Columns[0].Name.IndexOf(tableNamefe3) == -1 ? CodeBuild.LFString(tableNamefe3) :
-							(CodeBuild.LFString(fk.Columns[0].Name.Substring(0, fk.Columns[0].Name.IndexOf(tableNamefe3)) + tableNamefe3));
-						if (fk.Columns[0].Name.IndexOf(tableNamefe3) == 0 && fk.ReferencedTable != null) memberName = CodeBuild.LFString(fk.ReferencedTable.ClassName);
+						string memberName = fk.Columns[0].Name.IndexOf(tableNamefe3) == -1 ? LFString(tableNamefe3) :
+							(LFString(fk.Columns[0].Name.Substring(0, fk.Columns[0].Name.IndexOf(tableNamefe3)) + tableNamefe3));
+						if (fk.Columns[0].Name.IndexOf(tableNamefe3) == 0 && fk.ReferencedTable != null) memberName = LFString(fk.ReferencedTable.ClassName);
 
 						tsvarr.Add(string.Format(@"_obj_{0} = null;", memberName));
 						if (fkc1idx == fk.Columns.Count) {
@@ -659,7 +667,7 @@ namespace {0}.Model {{
 						csType.Contains("NpgsqlPolygon") ||
 						csType.Contains("NpgsqlCircle") ||
 
-						csType.Contains("NpgsqlInet") ||
+						csType.Contains("(IPAddress Address, int Subnet)") ||
 						csType.Contains("IPAddress") ||
 						csType.Contains("PhysicalAddress") ||
 
@@ -714,11 +722,11 @@ namespace {0}.Model {{
 	@"			_{0} = {0};
 ", uColumn_Name);
 					sb5.AppendFormat(@"
-				__jsonIgnore.ContainsKey(""{0}"") ? string.Empty : string.Format("",{0}:{{0}}"", {1}),", uColumn_Name, CodeBuild.GetToStringFieldConcat(column, uClass_Name + column.Name.ToUpper()));
+				__jsonIgnore.ContainsKey(""{0}"") ? string.Empty : string.Format("",{0}:{{0}}"", {1}),", uColumn_Name, GetToStringFieldConcat(column, uClass_Name + column.Name.ToUpper()));
 
 					sb10.AppendFormat(@"
 			if (allField || !__jsonIgnore.ContainsKey(""{0}"")) ht[""{0}""] = {1};", uColumn_Name,
-						csType.Contains("NpgsqlInet") ||
+						csType.Contains("(IPAddress Address, int Subnet)") ||
 						csType.Contains("IPAddress") ||
 						csType.Contains("PhysicalAddress") ? column.Attndims > 0 ?
 							string.Format("NpgsqlTypesConverter.GetJObject({0}, new int[{1}], 0)", "_" + uColumn_Name, column.Attndims) :
@@ -729,10 +737,10 @@ namespace {0}.Model {{
 				{0}, ""|"",", GetToStringStringify(column));
 					//		sb8.AppendFormat(@"
 					//if (string.Compare(""null"", ret[{2}]) != 0) _{0} = {1};",
-					//			uColumn_Name, string.Format(CodeBuild.GetStringifyParse(column.Type, column.CsType), "ret[" + column_idx + "]"), column_idx);
+					//			uColumn_Name, string.Format(GetStringifyParse(column.Type, column.CsType), "ret[" + column_idx + "]"), column_idx);
 					sb8.AppendFormat(@"
 			if (ht[""{0}""] != null) _{0} = {1};",
-						uColumn_Name, string.Format(CodeBuild.GetObjectConvertToCsTypeMethod(column.Type, column.CsType), "ht[\"" + uColumn_Name + "\"]"));
+						uColumn_Name, string.Format(GetObjectConvertToCsTypeMethod(column.Type, column.CsType), "ht[\"" + uColumn_Name + "\"]"));
 				}
 
 				if (sb2.Length != 0) {
@@ -820,40 +828,40 @@ namespace {0}.Model {{
 							 columnInfo.Name.ToLower() == "update_time" && columnInfo.CsType == "DateTime?" ||
 							 columnInfo.Name.ToLower() == "create_time" && columnInfo.CsType == "DateTime?";
 						if (string.Compare(columnInfo.Name, main_column, true) == 0) {
-							parmsNoneType2 += string.Format("\r\n			{0} = this.{1}, ", CodeBuild.UFString(columnInfo.Name), CodeBuild.UFString(table.PrimaryKeys[0].Name));
-							//if (!is_addignore) parmsNoneType2_add += string.Format("\r\n			{0} = this.{1}, ", CodeBuild.UFString(columnInfo.Name), CodeBuild.UFString(table.PrimaryKeys[0].Name));
+							parmsNoneType2 += string.Format("\r\n			{0} = this.{1}, ", UFString(columnInfo.Name), UFString(table.PrimaryKeys[0].Name));
+							//if (!is_addignore) parmsNoneType2_add += string.Format("\r\n			{0} = this.{1}, ", UFString(columnInfo.Name), UFString(table.PrimaryKeys[0].Name));
 
-							parmsNoneType4 += string.Format(GetCSTypeValue(columnInfo.Type), "this." + CodeBuild.UFString(table.PrimaryKeys[0].Name)) + ", ";
-							parmsNoneType5 += string.Format("\r\n			item.{0} = this.{1};", CodeBuild.UFString(columnInfo.Name), CodeBuild.UFString(table.PrimaryKeys[0].Name));
-							if (columnInfo.IsPrimaryKey) pkNamesNoneType += string.Format(GetCSTypeValue(table.PrimaryKeys[0].Type), "this." + CodeBuild.UFString(table.PrimaryKeys[0].Name)) + ", ";
-							//"this." + CodeBuild.UFString(table.PrimaryKeys[0].Name) + ", ";
+							parmsNoneType4 += string.Format(GetCSTypeValue(columnInfo.Type), "this." + UFString(table.PrimaryKeys[0].Name)) + ", ";
+							parmsNoneType5 += string.Format("\r\n			item.{0} = this.{1};", UFString(columnInfo.Name), UFString(table.PrimaryKeys[0].Name));
+							if (columnInfo.IsPrimaryKey) pkNamesNoneType += string.Format(GetCSTypeValue(table.PrimaryKeys[0].Type), "this." + UFString(table.PrimaryKeys[0].Name)) + ", ";
+							//"this." + UFString(table.PrimaryKeys[0].Name) + ", ";
 							continue;
 						}
-						if (columnInfo.IsPrimaryKey) pkNamesNoneType += string.Format(GetCSTypeValue(columnInfo.Type), CodeBuild.UFString(columnInfo.Name)) + ", ";
-						//CodeBuild.UFString(columnInfo.Name) + ", ";
+						if (columnInfo.IsPrimaryKey) pkNamesNoneType += string.Format(GetCSTypeValue(columnInfo.Type), UFString(columnInfo.Name)) + ", ";
+						//UFString(columnInfo.Name) + ", ";
 						else if (columnInfo.Name.ToLower() == "create_time" && columnInfo.CsType == "DateTime?") ;
-						else updateDiySet += string.Format("\r\n\t\t\t\t\t.Set{0}({0})", CodeBuild.UFString(columnInfo.Name));
+						else updateDiySet += string.Format("\r\n\t\t\t\t\t.Set{0}({0})", UFString(columnInfo.Name));
 
 						if (columnInfo.IsIdentity) {
 							//parmsNoneType2 += "0, ";
 							continue;
 						}
-						parms2 += columnInfo.CsType + " " + CodeBuild.UFString(columnInfo.Name) + ", ";
-						parmsNoneType2 += string.Format("\r\n			{0} = {0}, ", CodeBuild.UFString(columnInfo.Name));
+						parms2 += columnInfo.CsType + " " + UFString(columnInfo.Name) + ", ";
+						parmsNoneType2 += string.Format("\r\n			{0} = {0}, ", UFString(columnInfo.Name));
 						if (!is_addignore) {
-							parms2_add += columnInfo.CsType + " " + CodeBuild.UFString(columnInfo.Name) + ", ";
-							parmsNoneType2_add += string.Format("\r\n			{0} = {0}, ", CodeBuild.UFString(columnInfo.Name));
+							parms2_add += columnInfo.CsType + " " + UFString(columnInfo.Name) + ", ";
+							parmsNoneType2_add += string.Format("\r\n			{0} = {0}, ", UFString(columnInfo.Name));
 						}
 
 						ForeignKeyInfo fkk3 = t2.ForeignKeys.Find(delegate (ForeignKeyInfo fkk33) {
 							return fkk33.Columns[0].Name == columnInfo.Name;
 						});
 						if (fkk3 == null) {
-							parms1 += columnInfo.CsType + " " + CodeBuild.UFString(columnInfo.Name) + ", ";
-							parmsNoneType1 += CodeBuild.UFString(columnInfo.Name) + ", ";
+							parms1 += columnInfo.CsType + " " + UFString(columnInfo.Name) + ", ";
+							parmsNoneType1 += UFString(columnInfo.Name) + ", ";
 							if (!is_addignore) {
-								parms1_add += columnInfo.CsType + " " + CodeBuild.UFString(columnInfo.Name) + ", ";
-								parmsNoneType1_add += CodeBuild.UFString(columnInfo.Name) + ", ";
+								parms1_add += columnInfo.CsType + " " + UFString(columnInfo.Name) + ", ";
+								parmsNoneType1_add += UFString(columnInfo.Name) + ", ";
 							}
 						} else {
 							string fkk3_ReferencedTable_ObjName = fkk3.ReferencedTable.Name;
@@ -861,21 +869,21 @@ namespace {0}.Model {{
 							if (columnInfo.Name.EndsWith(endStr))
 								fkk3_ReferencedTable_ObjName = columnInfo.Name.Remove(columnInfo.Name.Length - fkk3.ReferencedColumns[0].Name.Length - 1);
 
-							fkk3_ReferencedTable_ObjName = CodeBuild.UFString(fkk3_ReferencedTable_ObjName);
-							parms1 += CodeBuild.UFString(fkk3.ReferencedTable.ClassName) + "Info " + fkk3_ReferencedTable_ObjName + ", ";
-							parmsNoneType1 += fkk3_ReferencedTable_ObjName + "." + CodeBuild.UFString(fkk3.ReferencedColumns[0].Name) + ", ";
+							fkk3_ReferencedTable_ObjName = UFString(fkk3_ReferencedTable_ObjName);
+							parms1 += UFString(fkk3.ReferencedTable.ClassName) + "Info " + fkk3_ReferencedTable_ObjName + ", ";
+							parmsNoneType1 += fkk3_ReferencedTable_ObjName + "." + UFString(fkk3.ReferencedColumns[0].Name) + ", ";
 							if (!is_addignore) {
-								parms1_add += CodeBuild.UFString(fkk3.ReferencedTable.ClassName) + "Info " + fkk3_ReferencedTable_ObjName + ", ";
-								parmsNoneType1_add += fkk3_ReferencedTable_ObjName + "." + CodeBuild.UFString(fkk3.ReferencedColumns[0].Name) + ", ";
+								parms1_add += UFString(fkk3.ReferencedTable.ClassName) + "Info " + fkk3_ReferencedTable_ObjName + ", ";
+								parmsNoneType1_add += fkk3_ReferencedTable_ObjName + "." + UFString(fkk3.ReferencedColumns[0].Name) + ", ";
 							}
 
 							if (columnInfo.IsPrimaryKey) {
-								parms3 += CodeBuild.UFString(fkk3.ReferencedTable.ClassName) + "Info " + fkk3_ReferencedTable_ObjName + ", ";
-								parmsNoneType3 += fkk3_ReferencedTable_ObjName + "." + CodeBuild.UFString(fkk3.ReferencedColumns[0].Name) + ", ";
-								parms4 += columnInfo.CsType + " " + CodeBuild.UFString(columnInfo.Name) + ", ";
-								parmsNoneType4 += string.Format(GetCSTypeValue(columnInfo.Type), CodeBuild.UFString(columnInfo.Name)) + ", ";
+								parms3 += UFString(fkk3.ReferencedTable.ClassName) + "Info " + fkk3_ReferencedTable_ObjName + ", ";
+								parmsNoneType3 += fkk3_ReferencedTable_ObjName + "." + UFString(fkk3.ReferencedColumns[0].Name) + ", ";
+								parms4 += columnInfo.CsType + " " + UFString(columnInfo.Name) + ", ";
+								parmsNoneType4 += string.Format(GetCSTypeValue(columnInfo.Type), UFString(columnInfo.Name)) + ", ";
 							}
-							//CodeBuild.UFString(columnInfo.Name) + " ?? default(" + columnInfo.CsType.Replace("?", "") + "), ";
+							//UFString(columnInfo.Name) + " ?? default(" + columnInfo.CsType.Replace("?", "") + "), ";
 							if (add_or_flag != "Flag" && fk.Columns[0].IsPrimaryKey) //中间表关系键，必须为主键
 								t2.Uniques.ForEach(delegate (List<ColumnInfo> cs) {
 									if (cs.Count < 2) return;
@@ -910,25 +918,25 @@ namespace {0}.Model {{
 					if (add_or_flag == "Flag") {
 						if (parms1 != parms2)
 							sb6.AppendFormat(@"
-		public {0}Info Flag{1}({2}) => Flag{1}({3});", CodeBuild.UFString(t2.ClassName), CodeBuild.UFString(addname_schema), parms1, parmsNoneType1);
+		public {0}Info Flag{1}({2}) => Flag{1}({3});", UFString(t2.ClassName), UFString(addname_schema), parms1, parmsNoneType1);
 						sb6.AppendFormat(@"
 		public {0}Info Flag{1}({2}) {{
 			{0}Info item = BLL.{0}.GetItem({5});
 			if (item == null) item = BLL.{0}.Insert(new {0}Info {{{3}}});{6}
 			return item;
 		}}
-", CodeBuild.UFString(t2.ClassName), CodeBuild.UFString(addname_schema), parms2, parmsNoneType2.Replace("\t\t\t", "\t\t\t\t"), solutionName, pkNamesNoneType, updateDiySet.Length > 0 ? "\r\n\t\t\telse item.UpdateDiy" + updateDiySet + ".ExecuteNonQuery();" : string.Empty);
+", UFString(t2.ClassName), UFString(addname_schema), parms2, parmsNoneType2.Replace("\t\t\t", "\t\t\t\t"), solutionName, pkNamesNoneType, updateDiySet.Length > 0 ? "\r\n\t\t\telse item.UpdateDiy" + updateDiySet + ".ExecuteNonQuery();" : string.Empty);
 					} else {
 						//sb6.Append(addname + "," + t2.Name);
 						if (parms1_add != parms2_add)
 							sb6.AppendFormat(@"
-		public {0}Info Add{1}({2}) => Add{1}({3});", CodeBuild.UFString(t2.ClassName), CodeBuild.UFString(addname_schema), parms1_add, parmsNoneType1_add);
+		public {0}Info Add{1}({2}) => Add{1}({3});", UFString(t2.ClassName), UFString(addname_schema), parms1_add, parmsNoneType1_add);
 						sb6.AppendFormat(@"
 		public {0}Info Add{1}({2}) => Add{1}(new {0}Info {{{3}}});
 		public {0}Info Add{1}({0}Info item) {{{5}
 			return item.Save();
 		}}
-", CodeBuild.UFString(t2.ClassName), CodeBuild.UFString(addname_schema), parms2_add, parmsNoneType2_add, solutionName, parmsNoneType5);
+", UFString(t2.ClassName), UFString(addname_schema), parms2_add, parmsNoneType2_add, solutionName, parmsNoneType5);
 					}
 
 					if (add_or_flag == "Flag") {
@@ -936,7 +944,7 @@ namespace {0}.Model {{
 						for (int deleteByUniqui_a = 0; deleteByUniqui_a < fk.Table.Uniques.Count; deleteByUniqui_a++)
 							if (fk.Table.Uniques[deleteByUniqui_a].Count > 1 && fk.Table.Uniques[deleteByUniqui_a][0].IsPrimaryKey == false) {
 								foreach (ColumnInfo deleteByuniquiCol in fk.Table.Uniques[deleteByUniqui_a])
-									deleteByUniqui = deleteByUniqui + "And" + CodeBuild.UFString(deleteByuniquiCol.Name);
+									deleteByUniqui = deleteByUniqui + "And" + UFString(deleteByuniquiCol.Name);
 								deleteByUniqui = "By" + deleteByUniqui.Substring(3);
 								break;
 							}
@@ -944,13 +952,13 @@ namespace {0}.Model {{
 		public int Unflag{1}({2}) => Unflag{1}({3});
 		public int Unflag{1}({4}) => BLL.{0}.Delete{9}({5});
 		public int Unflag{1}ALL() => BLL.{0}.DeleteBy{8}(this.{7});
-", CodeBuild.UFString(t2.ClassName), CodeBuild.UFString(addname_schema), parms3, parmsNoneType3, parms4, parmsNoneType4,
-	solutionName, string.Format(GetCSTypeValue(table.PrimaryKeys[0].Type), CodeBuild.UFString(table.PrimaryKeys[0].Name)),
-							CodeBuild.UFString(fk.Columns[0].Name), deleteByUniqui);
+", UFString(t2.ClassName), UFString(addname_schema), parms3, parmsNoneType3, parms4, parmsNoneType4,
+	solutionName, string.Format(GetCSTypeValue(table.PrimaryKeys[0].Type), UFString(table.PrimaryKeys[0].Name)),
+							UFString(fk.Columns[0].Name), deleteByUniqui);
 						if (ms > 2) {
 
 						} else {
-							string civ = string.Format(GetCSTypeValue(table.PrimaryKeys[0].Type), "_" + CodeBuild.UFString(table.PrimaryKeys[0].Name));
+							string civ = string.Format(GetCSTypeValue(table.PrimaryKeys[0].Type), "_" + UFString(table.PrimaryKeys[0].Name));
 							string f5 = t2name;
 							//if (addname != f5) {
 							string fk20_ReferencedTable_Name = fk2[0].ReferencedTable.Name;
@@ -965,7 +973,7 @@ namespace {0}.Model {{
 							//}
 							string objs_value = string.Format(@"
 		private List<{0}Info> _obj_{1}s;
-		public List<{0}Info> Obj_{1}s => _obj_{1}s ?? (_obj_{1}s = BLL.{0}.SelectBy{5}_{4}({3}).ToList());", CodeBuild.UFString(fk2[0].ReferencedTable.ClassName), CodeBuild.LFString(addname_schema), solutionName, civ, table.PrimaryKeys[0].Name, CodeBuild.UFString(f5));
+		public List<{0}Info> Obj_{1}s => _obj_{1}s ?? (_obj_{1}s = BLL.{0}.SelectBy{5}_{4}({3}).ToList());", UFString(fk2[0].ReferencedTable.ClassName), LFString(addname_schema), solutionName, civ, table.PrimaryKeys[0].Name, UFString(f5));
 							//如果中间表字段 > 2，那么应该把其中间表也查询出来
 							if (t2.Columns.Count > 2) {
 								string _f6 = fk.Columns[0].Name;
@@ -987,20 +995,20 @@ namespace {0}.Model {{
 		/// <summary>
 		/// 遍历时，可通过 Obj_{3} 可获取中间表数据
 		/// </summary>
-		public List<{0}Info> Obj_{1}s => _obj_{1}s ?? (_obj_{1}s = BLL.{0}.Select.InnerJoin<BLL.{2}>(""b"", @""b.""""{6}"""" = a.""""{5}"""""").Where(@""b.""""{4}"""" = {{0}}"", {7}).ToList());", CodeBuild.UFString(fk2[0].ReferencedTable.ClassName), CodeBuild.LFString(addname_schema), CodeBuild.UFString(t2.ClassName), CodeBuild.LFString(t2.ClassName),
+		public List<{0}Info> Obj_{1}s => _obj_{1}s ?? (_obj_{1}s = BLL.{0}.Select.InnerJoin<BLL.{2}>(""b"", @""b.""""{6}"""" = a.""""{5}"""""").Where(@""b.""""{4}"""" = {{0}}"", {7}).ToList());", UFString(fk2[0].ReferencedTable.ClassName), LFString(addname_schema), UFString(t2.ClassName), LFString(t2.ClassName),
 			_f6, _f7, _f8, civ.Replace(".Value", ""));
 							}
-							string objs_key = string.Format("Obj_{0}s", CodeBuild.LFString(addname));
+							string objs_key = string.Format("Obj_{0}s", LFString(addname));
 							if (dic_objs.ContainsKey(objs_key))
 								dic_objs[objs_key] = objs_value;
 							else
 								dic_objs.Add(objs_key, objs_value);
 						}
 					} else {
-						string f2 = fk.Columns[0].Name.CompareTo("parent_id") == 0 ? t2name : fk.Columns[0].Name.Replace(tablename + "_" + table.PrimaryKeys[0].Name, "") + CodeBuild.LFString(t2name);
+						string f2 = fk.Columns[0].Name.CompareTo("parent_id") == 0 ? t2name : fk.Columns[0].Name.Replace(tablename + "_" + table.PrimaryKeys[0].Name, "") + LFString(t2name);
 						string objs_value = string.Format(@"
 		private List<{0}Info> _obj_{1}s;
-		public List<{0}Info> Obj_{1}s => _obj_{1}s ?? (_obj_{1}s = BLL.{0}.SelectBy{3}(_{4}).Limit(500).ToList());", CodeBuild.UFString(t2.ClassName), f2, solutionName, CodeBuild.UFString(fk.Columns[0].Name), CodeBuild.UFString(table.PrimaryKeys[0].Name));
+		public List<{0}Info> Obj_{1}s => _obj_{1}s ?? (_obj_{1}s = BLL.{0}.SelectBy{3}(_{4}).Limit(500).ToList());", UFString(t2.ClassName), f2, solutionName, UFString(fk.Columns[0].Name), UFString(table.PrimaryKeys[0].Name));
 						string objs_key = string.Format("Obj_{0}s", f2);
 						if (!dic_objs.ContainsKey(objs_key))
 							dic_objs.Add(objs_key, objs_value);
@@ -1179,7 +1187,7 @@ namespace {0}.DAL {{
 			return new NpgsqlParameter[] {{
 {7}
 			}};
-		}}", solutionName, uClass_Name, string.Empty, nTable_Name, sqlInsert, sqlFields, orderBy, CodeBuild.AppendParameters(table, "				"));
+		}}", solutionName, uClass_Name, string.Empty, nTable_Name, sqlInsert, sqlFields, orderBy, AppendParameters(table, "				"));
 
 				sb1.AppendFormat(@"
 		public {0}Info GetItem(NpgsqlDataReader dr) {{
@@ -1191,9 +1199,9 @@ namespace {0}.DAL {{
 
 				foreach (ColumnInfo columnInfo in table.Columns) {
 					sb1.AppendFormat(@"
-			if (!dr.IsDBNull(++dataIndex)) item.{0} = {1};", (columnInfo.CsType == "JToken" ? "_" : "") + CodeBuild.UFString(columnInfo.Name), CodeBuild.GetDataReaderMethod(columnInfo.Type, columnInfo.CsType));
+			if (!dr.IsDBNull(++dataIndex)) item.{0} = {1};", (columnInfo.CsType == "JToken" ? "_" : "") + UFString(columnInfo.Name), GetDataReaderMethod(columnInfo.Type, columnInfo.CsType));
 					if (columnInfo.IsPrimaryKey)
-						sb1.AppendFormat(@" if (item.{0} == null) return null;", (columnInfo.CsType == "JToken" ? "_" : "") + CodeBuild.UFString(columnInfo.Name));
+						sb1.AppendFormat(@" if (item.{0} == null) return null;", (columnInfo.CsType == "JToken" ? "_" : "") + UFString(columnInfo.Name));
 				}
 
 				sb1.AppendFormat(@"
@@ -1214,9 +1222,9 @@ namespace {0}.DAL {{
 			{0}Info item = new {0}Info();", uClass_Name);
 				foreach (ColumnInfo columnInfo in table.Columns) {
 					dal_async_code += string.Format(@"
-			if (!await dr.IsDBNullAsync(++dataIndex)) item.{0} = {1};", (columnInfo.CsType == "JToken" ? "_" : "") + CodeBuild.UFString(columnInfo.Name), CodeBuild.GetDataReaderMethodAsync(columnInfo.Type, columnInfo.CsType));
+			if (!await dr.IsDBNullAsync(++dataIndex)) item.{0} = {1};", (columnInfo.CsType == "JToken" ? "_" : "") + UFString(columnInfo.Name), GetDataReaderMethodAsync(columnInfo.Type, columnInfo.CsType));
 					if (columnInfo.IsPrimaryKey)
-						dal_async_code += string.Format(@" if (item.{0} == null) return (null, dataIndex);", (columnInfo.CsType == "JToken" ? "_" : "") + CodeBuild.UFString(columnInfo.Name));
+						dal_async_code += string.Format(@" if (item.{0} == null) return (null, dataIndex);", (columnInfo.CsType == "JToken" ? "_" : "") + UFString(columnInfo.Name));
 				}
 
 				dal_async_code += string.Format(@"
@@ -1232,11 +1240,11 @@ namespace {0}.DAL {{
 					string sqlParmsANoneType = string.Empty;
 					int sqlParmsAIndex = 0;
 					foreach (ColumnInfo columnInfo in cs) {
-						parms += columnInfo.CsType.Replace("?", "") + " " + CodeBuild.UFString(columnInfo.Name) + ", ";
-						parmsBy += CodeBuild.UFString(columnInfo.Name) + "And";
+						parms += columnInfo.CsType.Replace("?", "") + " " + UFString(columnInfo.Name) + ", ";
+						parmsBy += UFString(columnInfo.Name) + "And";
 						sqlParms += @"""""" + columnInfo.Name + @""""" = @" + columnInfo.Name + " AND ";
 						sqlParmsA += @"a.""""" + columnInfo.Name + @""""" = {" + sqlParmsAIndex++ + "} AND ";
-						sqlParmsANoneType += CodeBuild.UFString(columnInfo.Name) + ", ";
+						sqlParmsANoneType += UFString(columnInfo.Name) + ", ";
 					}
 					parms = parms.Substring(0, parms.Length - 2);
 					parmsBy = parmsBy.Substring(0, parmsBy.Length - 3);
@@ -1249,20 +1257,20 @@ namespace {0}.DAL {{
 		public int Delete{2}({0}) {{
 			return PSqlHelper.ExecuteNonQuery(string.Concat(TSQL.Delete, @""{1}""), 
 {3});
-		}}", parms, sqlParms, cs[0].IsPrimaryKey ? string.Empty : parmsBy, CodeBuild.AppendParameters(cs, "				"));
+		}}", parms, sqlParms, cs[0].IsPrimaryKey ? string.Empty : parmsBy, AppendParameters(cs, "				"));
 					dal_async_code += string.Format(@"
 		public Task<int> Delete{2}Async({0}) {{
 			return PSqlHelper.ExecuteNonQueryAsync(string.Concat(TSQL.Delete, @""{1}""), 
 {3});
-		}}", parms, sqlParms, cs[0].IsPrimaryKey ? string.Empty : parmsBy, CodeBuild.AppendParameters(cs, "				"));
+		}}", parms, sqlParms, cs[0].IsPrimaryKey ? string.Empty : parmsBy, AppendParameters(cs, "				"));
 				}
 				table.ForeignKeys.ForEach(delegate (ForeignKeyInfo fkk) {
 					string parms = string.Empty;
 					string parmsBy = "By";
 					string sqlParms = string.Empty;
 					foreach (ColumnInfo columnInfo in fkk.Columns) {
-						parms += columnInfo.CsType.Replace("?", "") + " " + CodeBuild.UFString(columnInfo.Name) + ", ";
-						parmsBy += CodeBuild.UFString(columnInfo.Name) + "And";
+						parms += columnInfo.CsType.Replace("?", "") + " " + UFString(columnInfo.Name) + ", ";
+						parmsBy += UFString(columnInfo.Name) + "And";
 						sqlParms += @"""""" + columnInfo.Name + @""""" = @" + columnInfo.Name + " AND ";
 					}
 					parms = parms.Substring(0, parms.Length - 2);
@@ -1275,12 +1283,12 @@ namespace {0}.DAL {{
 		public int Delete{2}({0}) {{
 			return PSqlHelper.ExecuteNonQuery(string.Concat(TSQL.Delete, @""{1}""), 
 {3});
-		}}", parms, sqlParms, parmsBy, CodeBuild.AppendParameters(fkk.Columns, "				"));
+		}}", parms, sqlParms, parmsBy, AppendParameters(fkk.Columns, "				"));
 					dal_async_code += string.Format(@"
 		public Task<int> Delete{2}Async({0}) {{
 			return PSqlHelper.ExecuteNonQueryAsync(string.Concat(TSQL.Delete, @""{1}""), 
 {3});
-		}}", parms, sqlParms, parmsBy, CodeBuild.AppendParameters(fkk.Columns, "				"));
+		}}", parms, sqlParms, parmsBy, AppendParameters(fkk.Columns, "				"));
 				});
 
 				if (table.PrimaryKeys.Count > 0) {
@@ -1303,8 +1311,8 @@ namespace {0}.DAL {{
 							arrUndeSql = "[" + arrUndeSql.Substring(2) + "]";
 							arrType = GetCSType(col.Type, 0, col.SqlType);
 						}
-						string lname = CodeBuild.LFString(col.Name);
-						string valueParm = CodeBuild.AppendParameters(col, "");
+						string lname = LFString(col.Name);
+						string valueParm = AppendParameters(col, "");
 						valueParm = valueParm.Remove(valueParm.LastIndexOf("Value = ") + 8);
 						string valueParm2 = valueParm.Replace("\"" + col.Name + "\"", "$\"@" + col.Name + "_{_parameters.Count}\"");
 						if (col.Attndims > 0) {
@@ -1323,14 +1331,14 @@ namespace {0}.DAL {{
 				_setQs.Enqueue(ni => _item.{0} = ni.{0});
 				return this.Set(@""""""{1}"""""", $@""array_remove(""""{1}"""", @{1}_{{_parameters.Count}})"", 
 					{5}value }});
-			}}", CodeBuild.UFString(col.Name), col.Name, col.CsType, valueParm2, arrType, valueParm2.Replace("NpgsqlDbType.Array | ", ""));
+			}}", UFString(col.Name), col.Name, col.CsType, valueParm2, arrType, valueParm2.Replace("NpgsqlDbType.Array | ", ""));
 						}
 						sb5.AppendFormat(@"
 			public SqlUpdateBuild Set{0}({2} value{4}) {{
 				_setQs.Enqueue(ni => _item.{0} = ni.{0});
 				return this.Set({6}@""""""{1}""""{5}"", $""@{1}_{{_parameters.Count}}"", 
 					{3}value }});
-			}}", CodeBuild.UFString(col.Name), col.Name, arrType, valueParm2.Replace("NpgsqlDbType.Array | ", ""), arrParm, arrUndeSql, string.IsNullOrEmpty(arrUndeSql) ? "" : "$");
+			}}", UFString(col.Name), col.Name, arrType, valueParm2.Replace("NpgsqlDbType.Array | ", ""), arrParm, arrUndeSql, string.IsNullOrEmpty(arrUndeSql) ? "" : "$");
 						if (table.ForeignKeys.FindIndex(delegate (ForeignKeyInfo fkf) { return fkf.Columns.FindIndex(delegate (ColumnInfo fkfpkf) { return fkfpkf.Name == col.Name; }) != -1; }) == -1) {
 							string fptype = "";
 							if (col.Type == NpgsqlDbType.Smallint || col.Type == NpgsqlDbType.Integer || col.Type == NpgsqlDbType.Bigint ||
@@ -1348,7 +1356,7 @@ namespace {0}.DAL {{
 			}}
 			public SqlUpdateBuild Set{0}UnFlag(int _0_16{4}) {{
 				return this.Set{0}Flag(_0_16{8}, true);
-			}}", CodeBuild.UFString(col.Name), col.Name, arrType, valueParm2.Replace("NpgsqlDbType.Array | ", ""),
+			}}", UFString(col.Name), col.Name, arrType, valueParm2.Replace("NpgsqlDbType.Array | ", ""),
 					arrParm, arrUndeSql, arrUndeSql, string.IsNullOrEmpty(arrUndeSql) ? "" : "$", col.Attndims > 0 ? " ," + arrUnde.Trim('[', ']') : "");
 							}
 							if (!string.IsNullOrEmpty(fptype)) {
@@ -1357,12 +1365,12 @@ namespace {0}.DAL {{
 				_setQs.Enqueue(ni => _item.{0} = ni.{0});
 				return this.Set({7}@""""""{1}""""{5}"", $@""COALESCE(""""{1}""""{6}, 0) + @{1}_{{_parameters.Count}}"", 
 					{3}value }});
-			}}", CodeBuild.UFString(col.Name), col.Name, fptype, valueParm2.Replace("NpgsqlDbType.Array | ", ""),
+			}}", UFString(col.Name), col.Name, fptype, valueParm2.Replace("NpgsqlDbType.Array | ", ""),
 					arrParm, arrUndeSql, arrUndeSql, string.IsNullOrEmpty(arrUndeSql) ? "" : "$", col.Attndims > 0 ? " ," + arrUnde.Trim('[', ']') : "");
 							}
 						}
 						sb6.AppendFormat(@"
-				.Set{0}(item.{0})", CodeBuild.UFString(col.Name));
+				.Set{0}(item.{0})", UFString(col.Name));
 					}
 
 					string dal_insert_code = string.Format(@"
@@ -1481,6 +1489,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Net;
 using System.Net.NetworkInformation;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Npgsql;
 using NpgsqlTypes;
@@ -1502,7 +1511,7 @@ namespace {0}.BLL {{
 				foreach (List<ColumnInfo> cs in table.Uniques) {
 					string parms = string.Empty;
 					foreach (ColumnInfo columnInfo in cs) {
-						parms += columnInfo.CsType.Replace("?", "") + " " + CodeBuild.UFString(columnInfo.Name) + ", ";
+						parms += columnInfo.CsType.Replace("?", "") + " " + UFString(columnInfo.Name) + ", ";
 					}
 					parms = parms.Substring(0, parms.Length - 2);
 					if (uniques_dic.ContainsKey(parms)) continue;
@@ -1520,14 +1529,14 @@ namespace {0}.BLL {{
 					string cacheRemoveCode = string.Empty;
 					string whereCondi = string.Empty;
 					foreach (ColumnInfo columnInfo in cs) {
-						parms += columnInfo.CsType.Replace("?", "") + " " + CodeBuild.UFString(columnInfo.Name) + ", ";
-						parmsNewItem += CodeBuild.UFString(columnInfo.Name) + " = " + CodeBuild.UFString(columnInfo.Name) + ", ";
-						parmsBy += CodeBuild.UFString(columnInfo.Name) + "And";
-						parmsNoneType += CodeBuild.UFString(columnInfo.Name) + ", ";
-						parmsNodeTypeUpdateCacheRemove += "item." + CodeBuild.UFString(columnInfo.Name) + ", \"_,_\", ";
-						cacheCond += CodeBuild.UFString(columnInfo.Name) + " == null || ";
-						whereCondi += string.Format(".Where{0}({1})", CodeBuild.UFString(columnInfo.Name), 
-							columnInfo.CsType.Contains("?") && !cs[0].IsPrimaryKey ? string.Concat("new ", columnInfo.CsType, "(", CodeBuild.UFString(columnInfo.Name), ")") : CodeBuild.UFString(columnInfo.Name));
+						parms += columnInfo.CsType.Replace("?", "") + " " + UFString(columnInfo.Name) + ", ";
+						parmsNewItem += UFString(columnInfo.Name) + " = " + UFString(columnInfo.Name) + ", ";
+						parmsBy += UFString(columnInfo.Name) + "And";
+						parmsNoneType += UFString(columnInfo.Name) + ", ";
+						parmsNodeTypeUpdateCacheRemove += "item." + UFString(columnInfo.Name) + ", \"_,_\", ";
+						cacheCond += UFString(columnInfo.Name) + " == null || ";
+						whereCondi += string.Format(".Where{0}({1})", UFString(columnInfo.Name), 
+							columnInfo.CsType.Contains("?") && !cs[0].IsPrimaryKey ? string.Concat("new ", columnInfo.CsType, "(", UFString(columnInfo.Name), ")") : UFString(columnInfo.Name));
 					}
 					parms = parms.Substring(0, parms.Length - 2);
 					parmsNewItem = parmsNewItem.Substring(0, parmsNewItem.Length - 2);
@@ -1572,7 +1581,7 @@ namespace {0}.BLL {{
 			string key = string.Concat(""{0}_BLL_{1}{2}_"", {3});
 			string value = RedisHelper.Get(key);
 			if (!string.IsNullOrEmpty(value))
-				try {{ return {1}Info.Parse(value); }} catch {{ }}
+				try {{ return {1}Info.Parse(value); }} catch {{ PSqlHelper.Instance.Log.LogWarning(""性能警告：{1}.GetItem{2}从缓存中反序列化失败""); }}
 			{1}Info item = Select{7}.ToOne();
 			if (item == null) return null;
 			RedisHelper.Set(key, item.Stringify(), itemCacheTimeout);
@@ -1586,7 +1595,7 @@ namespace {0}.BLL {{
 			string key = string.Concat(""{0}_BLL_{1}{2}_"", {3});
 			string value = await RedisHelper.GetAsync(key);
 			if (!string.IsNullOrEmpty(value))
-				try {{ return {1}Info.Parse(value); }} catch {{ }}
+				try {{ return {1}Info.Parse(value); }} catch {{ PSqlHelper.Instance.Log.LogWarning(""性能警告：{1}.GetItem{2}Async从缓存中反序列化失败""); }}
 			{1}Info item = await Select{7}.ToOneAsync();
 			if (item == null) return null;
 			await RedisHelper.SetAsync(key, item.Stringify(), itemCacheTimeout);
@@ -1687,7 +1696,7 @@ namespace {0}.BLL {{
 			RedisHelper.Remove(", redisRemove.Substring(0, redisRemove.Length - 2), ");");
 					string cspk2GuidSetValue = "";
 					foreach (ColumnInfo cspk2 in table.PrimaryKeys)
-						if (cspk2.CsType == "Guid?") cspk2GuidSetValue += string.Format("\r\n			if (item.{0} == null) item.{0} = RedisHelper.NewMongodbId();", CodeBuild.UFString(cspk2.Name));
+						if (cspk2.CsType == "Guid?") cspk2GuidSetValue += string.Format("\r\n			if (item.{0} == null) item.{0} = RedisHelper.NewMongodbId();", UFString(cspk2.Name));
 					sb1.AppendFormat(@"
 		public static {0}Info Insert({0}Info item) {{{3}
 			item = dal.Insert(item);
@@ -1728,9 +1737,9 @@ namespace {0}.BLL {{
 					string fkcsFilter = string.Empty;
 					int fkcsFilterIdx = 0;
 					foreach (ColumnInfo c1 in fk.Columns) {
-						fkcsBy += CodeBuild.UFString(c1.Name) + "And";
-						fkcsParms += CodeBuild.UFString(c1.Name) + ", ";
-						fkcsTypeParms += c1.CsType.Replace("?", "") + " " + CodeBuild.UFString(c1.Name) + ", ";
+						fkcsBy += UFString(c1.Name) + "And";
+						fkcsParms += UFString(c1.Name) + ", ";
+						fkcsTypeParms += c1.CsType.Replace("?", "") + " " + UFString(c1.Name) + ", ";
 						fkcsFilter += @"a.""""" + c1.Name + @""""" = {" + fkcsFilterIdx++ + "} and ";
 					}
 					fkcsBy = fkcsBy.Remove(fkcsBy.Length - 3);
@@ -1820,12 +1829,12 @@ namespace {0}.BLL {{
 					}
 					string addname_schema = addname == t2.Name && t2.Owner != table.Owner ? t2.ClassName : addname;
 
-					string orgInfo = CodeBuild.UFString(fk2[0].ReferencedTable.ClassName);
-					string fkcsBy = CodeBuild.UFString(addname_schema);
+					string orgInfo = UFString(fk2[0].ReferencedTable.ClassName);
+					string fkcsBy = UFString(addname_schema);
 					if (byItems.ContainsKey(fkcsBy)) return;
 					byItems.Add(fkcsBy, true);
 
-					string civ = string.Format(GetCSTypeValue(fk2[0].ReferencedTable.PrimaryKeys[0].Type), CodeBuild.UFString(fk2[0].ReferencedTable.PrimaryKeys[0].Name));
+					string civ = string.Format(GetCSTypeValue(fk2[0].ReferencedTable.PrimaryKeys[0].Type), UFString(fk2[0].ReferencedTable.PrimaryKeys[0].Name));
 					sb1.AppendFormat(@"
 		public static {0}SelectBuild SelectBy{1}(params {2}Info[] {5}s) => Select.Where{1}({5}s);
 		public static {0}SelectBuild SelectBy{1}_{4}(params {3}[] {5}_ids) => Select.Where{1}_{4}({5}_ids);", uClass_Name, fkcsBy, orgInfo, fk2[0].ReferencedTable.PrimaryKeys[0].CsType.Replace("?", ""), table.PrimaryKeys[0].Name, LFString(orgInfo));
@@ -1855,7 +1864,7 @@ namespace {0}.BLL {{
 			var subConditionSql = subConditionSelect.ToString(@""""""{6}"""""").Replace(""\"" a \r\nWHERE ("", ""\"" WHERE ("");
 			if (subCondition != null) subConditionSql = subConditionSql.Replace(""a.\"""", ""\""{11}\"".\""{12}\"".\"""");
 			return base.Where($""EXISTS({{subConditionSql}})"");
-		}}", uClass_Name, fkcsBy, orgInfo, civ, string.Empty, CodeBuild.UFString(t2.ClassName), _f6, _f7, _f8, _f9, LFString(orgInfo), t2.Owner, t2.Name);
+		}}", uClass_Name, fkcsBy, orgInfo, civ, string.Empty, UFString(t2.ClassName), _f6, _f7, _f8, _f9, LFString(orgInfo), t2.Owner, t2.Name);
 				});
 
 				table.Columns.ForEach(delegate (ColumnInfo col) {
@@ -1865,7 +1874,7 @@ namespace {0}.BLL {{
 					//if (col.IsPrimaryKey) return;
 					//if (lname == "create_time" ||
 					//	lname == "update_time") return;
-					string fkcsBy = CodeBuild.UFString(col.Name);
+					string fkcsBy = UFString(col.Name);
 					if (byItems.ContainsKey(fkcsBy)) return;
 					byItems.Add(fkcsBy, true);
 
@@ -2059,9 +2068,9 @@ namespace {0}.BLL {{
 					string pkHiddens = string.Empty;
 					for (int a = 0; a < table.PrimaryKeys.Count; a++) {
 						ColumnInfo col88 = table.PrimaryKeys[a];
-						pkNames += CodeBuild.UFString(col88.Name) + ",";
-						pkUrlQuerys += string.Format(@"{0}=@item.{0}&", CodeBuild.UFString(col88.Name));
-						pkHiddens += string.Format(@"@item.{0},", CodeBuild.UFString(col88.Name));
+						pkNames += UFString(col88.Name) + ",";
+						pkUrlQuerys += string.Format(@"{0}=@item.{0}&", UFString(col88.Name));
+						pkHiddens += string.Format(@"@item.{0},", UFString(col88.Name));
 					}
 					if (pkNames.Length > 0) pkNames = pkNames.Remove(pkNames.Length - 1);
 					if (pkUrlQuerys.Length > 0) pkUrlQuerys = pkUrlQuerys.Remove(pkUrlQuerys.Length - 1);
@@ -2116,7 +2125,7 @@ namespace {0}.BLL {{
 						});
 
 						string csType = col.CsType;
-						string csUName = CodeBuild.UFString(col.Name);
+						string csUName = UFString(col.Name);
 						string comment = _column_coments[table.FullName][col.Name];
 						if (csType == "string") {
 							keyLikes += "a." + col.Name + " ilike {0} or ";
@@ -2135,12 +2144,12 @@ namespace {0}.BLL {{
 						string strName = string.Empty;
 						if (fks.Count > 0) {
 							fk = fks[0];
-							FK_uEntry_Name = fk.ReferencedTable != null ? CodeBuild.GetCSName(fk.ReferencedTable.Name) :
-								CodeBuild.GetCSName(TableInfo.GetEntryName(fk.ReferencedTableName));
+							FK_uEntry_Name = fk.ReferencedTable != null ? GetCSName(fk.ReferencedTable.Name) :
+								GetCSName(TableInfo.GetEntryName(fk.ReferencedTableName));
 							tableNamefe3 = fk.ReferencedTable != null ? fk.ReferencedTable.Name : FK_uEntry_Name;
-							memberName = fk.Columns[0].Name.IndexOf(tableNamefe3) == -1 ? CodeBuild.LFString(tableNamefe3) :
-								(CodeBuild.LFString(fk.Columns[0].Name.Substring(0, fk.Columns[0].Name.IndexOf(tableNamefe3)) + tableNamefe3));
-							if (fk.Columns[0].Name.IndexOf(tableNamefe3) == 0 && fk.ReferencedTable != null) memberName = CodeBuild.LFString(fk.ReferencedTable.ClassName);
+							memberName = fk.Columns[0].Name.IndexOf(tableNamefe3) == -1 ? LFString(tableNamefe3) :
+								(LFString(fk.Columns[0].Name.Substring(0, fk.Columns[0].Name.IndexOf(tableNamefe3)) + tableNamefe3));
+							if (fk.Columns[0].Name.IndexOf(tableNamefe3) == 0 && fk.ReferencedTable != null) memberName = LFString(fk.ReferencedTable.ClassName);
 
 							ColumnInfo strNameCol = null;
 							if (fk.ReferencedTable != null) {
@@ -2151,14 +2160,14 @@ namespace {0}.BLL {{
 									return col88.CsType == "string" && col88.Length > 0 && col88.Length < 300;
 								});
 							}
-							strName = strNameCol != null ? "." + CodeBuild.UFString(strNameCol.Name) : string.Empty;
+							strName = strNameCol != null ? "." + UFString(strNameCol.Name) : string.Empty;
 						}
 						string Obj_name = string.Concat("Obj_", memberName, strName);
 
 						if (!col.IsIdentity && fks.Count == 1) {
 							ForeignKeyInfo fkcb = fks[0];
-							string FK_uClass_Name = fkcb.ReferencedTable != null ? CodeBuild.UFString(fkcb.ReferencedTable.ClassName) :
-								CodeBuild.UFString(TableInfo.GetClassName(fkcb.ReferencedTableName));
+							string FK_uClass_Name = fkcb.ReferencedTable != null ? UFString(fkcb.ReferencedTable.ClassName) :
+								UFString(TableInfo.GetClassName(fkcb.ReferencedTableName));
 
 							getListParamQuery += string.Format(@"[FromQuery] {0}[] {1}, ", csType, csUName);
 							sb3.AppendFormat(@"
@@ -2174,14 +2183,14 @@ namespace {0}.BLL {{
 							str_listTd += string.Format(@"<td>[@item.{0}] @item.Obj_{1}{2}</td>
 								", csUName, memberName, string.IsNullOrEmpty(strName) ? "" : ("?" + strName));
 							str_controller_list_join += string.Format(@"
-				.LeftJoin<{0}>(""{3}"", ""{3}.{1} = a.{2}"")", CodeBuild.UFString(fks[0].ReferencedTable.ClassName), fks[0].ReferencedColumns[0].Name, fks[0].Columns[0].Name, (char)++str_controller_list_join_alias);
-							if (str_listCms2FilterFK_fkitems.Contains("	var fk_" + CodeBuild.LFString(fks[0].ReferencedTable.ClassName) + "s = ") == false)
+				.LeftJoin<{0}>(""{3}"", ""{3}.{1} = a.{2}"")", UFString(fks[0].ReferencedTable.ClassName), fks[0].ReferencedColumns[0].Name, fks[0].Columns[0].Name, (char)++str_controller_list_join_alias);
+							if (str_listCms2FilterFK_fkitems.Contains("	var fk_" + LFString(fks[0].ReferencedTable.ClassName) + "s = ") == false)
 								str_listCms2FilterFK_fkitems += string.Format(@"
-	var fk_{1}s = {0}.Select.ToList();", CodeBuild.UFString(fks[0].ReferencedTable.ClassName), CodeBuild.LFString(fks[0].ReferencedTable.ClassName));
+	var fk_{1}s = {0}.Select.ToList();", UFString(fks[0].ReferencedTable.ClassName), LFString(fks[0].ReferencedTable.ClassName));
 							str_listCms2FilterFK += string.Format(@"
 			{{ name: '{0}', field: '{4}', text: @Html.Json(fk_{1}s.Select(a => a.{2})), value: @Html.Json(fk_{1}s.Select(a => a.{3})) }},",
-				CodeBuild.UFString(fks[0].ReferencedTable.ClassName), CodeBuild.LFString(fks[0].ReferencedTable.ClassName),
-				string.IsNullOrEmpty(strName) ? "ToString()" : strName.TrimStart('.'), CodeBuild.UFString(fks[0].ReferencedColumns[0].Name), CodeBuild.UFString(fks[0].Columns[0].Name));
+				UFString(fks[0].ReferencedTable.ClassName), LFString(fks[0].ReferencedTable.ClassName),
+				string.IsNullOrEmpty(strName) ? "ToString()" : strName.TrimStart('.'), UFString(fks[0].ReferencedColumns[0].Name), UFString(fks[0].Columns[0].Name));
 						} else if (csType == "string" && !ttfk_flag) {
 							ttfk_flag = true;
 							string t1 = string.Format(@"<th scope=""col"">{0}</th>
@@ -2219,8 +2228,8 @@ namespace {0}.BLL {{
 					string itemCsParamInsertForm = "";
 					string itemCsParamUpdateForm = "";
 					table.Columns.ForEach(delegate (ColumnInfo col88) {
-						string csLName = CodeBuild.LFString(col88.Name);
-						string csUName = CodeBuild.UFString(col88.Name);
+						string csLName = LFString(col88.Name);
+						string csUName = UFString(col88.Name);
 						string csType = col88.CsType;
 
 						if (col88.IsPrimaryKey) {
@@ -2314,25 +2323,25 @@ namespace {0}.BLL {{
 							return col88.CsType == "string" && col88.Length > 0 && col88.Length < 300;
 						});
 						if (strNameCol == null) strNameCol = fk2[0].ReferencedTable.PrimaryKeys[0];
-						string strName = CodeBuild.UFString(strNameCol.Name);
+						string strName = UFString(strNameCol.Name);
 
-						getListParamQuery += string.Format(@"[FromQuery] {0}[] {1}_{2}, ", fk2[0].ReferencedTable.PrimaryKeys[0].CsType.Replace("?", ""), CodeBuild.UFString(addname), table.PrimaryKeys[0].Name);
+						getListParamQuery += string.Format(@"[FromQuery] {0}[] {1}_{2}, ", fk2[0].ReferencedTable.PrimaryKeys[0].CsType.Replace("?", ""), UFString(addname), table.PrimaryKeys[0].Name);
 						sb3.AppendFormat(@"
-			if ({0}_{1}.Length > 0) select.Where{0}_{1}({0}_{1});", CodeBuild.UFString(addname), table.PrimaryKeys[0].Name);
-						if (str_listCms2FilterFK_fkitems.Contains("	var fk_" + CodeBuild.LFString(fk2[0].ReferencedTable.ClassName) + "s = ") == false)
+			if ({0}_{1}.Length > 0) select.Where{0}_{1}({0}_{1});", UFString(addname), table.PrimaryKeys[0].Name);
+						if (str_listCms2FilterFK_fkitems.Contains("	var fk_" + LFString(fk2[0].ReferencedTable.ClassName) + "s = ") == false)
 							str_listCms2FilterFK_fkitems += string.Format(@"
-	var fk_{1}s = {0}.Select.ToList();", CodeBuild.UFString(fk2[0].ReferencedTable.ClassName), CodeBuild.LFString(fk2[0].ReferencedTable.ClassName));
+	var fk_{1}s = {0}.Select.ToList();", UFString(fk2[0].ReferencedTable.ClassName), LFString(fk2[0].ReferencedTable.ClassName));
 						str_listCms2FilterFK += string.Format(@"
 			{{ name: '{0}', field: '{4}', text: @Html.Json(fk_{1}s.Select(a => a.{2})), value: @Html.Json(fk_{1}s.Select(a => a.{3})) }},",
-			CodeBuild.UFString(fk2[0].ReferencedTable.ClassName), CodeBuild.LFString(fk2[0].ReferencedTable.ClassName),
-			string.IsNullOrEmpty(strName) ? "ToString()" : strName.TrimStart('.'), CodeBuild.UFString(fk2[0].ReferencedColumns[0].Name), CodeBuild.UFString(fk2[0].Columns[0].Name));
+			UFString(fk2[0].ReferencedTable.ClassName), LFString(fk2[0].ReferencedTable.ClassName),
+			string.IsNullOrEmpty(strName) ? "ToString()" : strName.TrimStart('.'), UFString(fk2[0].ReferencedColumns[0].Name), UFString(fk2[0].Columns[0].Name));
 						//add.html 标签关联
-						itemCsParamInsertForm += string.Format(", [FromForm] {0}[] mn_{1}", fk2[0].ReferencedColumns[0].CsType.Replace("?", ""), CodeBuild.UFString(addname));
-						itemCsParamUpdateForm += string.Format(", [FromForm] {0}[] mn_{1}", fk2[0].ReferencedColumns[0].CsType.Replace("?", ""), CodeBuild.UFString(addname));
+						itemCsParamInsertForm += string.Format(", [FromForm] {0}[] mn_{1}", fk2[0].ReferencedColumns[0].CsType.Replace("?", ""), UFString(addname));
+						itemCsParamUpdateForm += string.Format(", [FromForm] {0}[] mn_{1}", fk2[0].ReferencedColumns[0].CsType.Replace("?", ""), UFString(addname));
 						str_controller_insert_mn += string.Format(@"
 			//关联 {1}
 			foreach ({0} mn_{1}_in in mn_{1})
-				item.Flag{1}(mn_{1}_in);", fk2[0].ReferencedColumns[0].CsType.Replace("?", ""), CodeBuild.UFString(addname));
+				item.Flag{1}(mn_{1}_in);", fk2[0].ReferencedColumns[0].CsType.Replace("?", ""), UFString(addname));
 						str_controller_update_mn += string.Format(@"
 			//关联 {1}
 			if (mn_{1}.Length == 0) {{
@@ -2345,7 +2354,7 @@ namespace {0}.BLL {{
 					else mn_{1}_list.RemoveAt(idx);
 				}}
 				mn_{1}_list.ForEach(a => item.Flag{1}(a));
-			}}", fk2[0].ReferencedColumns[0].CsType.Replace("?", ""), CodeBuild.UFString(addname), addname);
+			}}", fk2[0].ReferencedColumns[0].CsType.Replace("?", ""), UFString(addname), addname);
 						str_addhtml_mn += string.Format(@"
 						<tr>
 							<td>{1}</td>
@@ -2354,14 +2363,14 @@ namespace {0}.BLL {{
 									@foreach ({0}Info fk in fk_{1}s) {{ <option value=""@fk.{4}"">@fk.{5}</option> }}
 								</select>
 							</td>
-						</tr>", CodeBuild.UFString(fk2[0].ReferencedTable.ClassName), CodeBuild.LFString(fk2[0].ReferencedTable.ClassName),
-							CodeBuild.UFString(addname), CodeBuild.LFString(addname), CodeBuild.UFString(fk2[0].ReferencedColumns[0].Name), strName);
-						if (str_fk_getlist.Contains("	var fk_" + CodeBuild.LFString(fk2[0].ReferencedTable.ClassName) + "s") == false)
+						</tr>", UFString(fk2[0].ReferencedTable.ClassName), LFString(fk2[0].ReferencedTable.ClassName),
+							UFString(addname), LFString(addname), UFString(fk2[0].ReferencedColumns[0].Name), strName);
+						if (str_fk_getlist.Contains("	var fk_" + LFString(fk2[0].ReferencedTable.ClassName) + "s") == false)
 							str_fk_getlist += string.Format(@"
-	var fk_{1}s = {0}.Select.ToList();", CodeBuild.UFString(fk2[0].ReferencedTable.ClassName), CodeBuild.LFString(fk2[0].ReferencedTable.ClassName));
+	var fk_{1}s = {0}.Select.ToList();", UFString(fk2[0].ReferencedTable.ClassName), LFString(fk2[0].ReferencedTable.ClassName));
 						str_addjs_mn_initUI += string.Format(@"
 			item.mn_{0} = @Html.Json(item.Obj_{2}s);
-			for (var a = 0; a < item.mn_{0}.length; a++) $(form.mn_{0}).find('option[value=""{{0}}""]'.format(item.mn_{0}[a].{1})).attr('selected', 'selected');", CodeBuild.UFString(addname), CodeBuild.UFString(fk2[0].ReferencedColumns[0].Name), CodeBuild.LFString(addname));
+			for (var a = 0; a < item.mn_{0}.length; a++) $(form.mn_{0}).find('option[value=""{{0}}""]'.format(item.mn_{0}[a].{1})).attr('selected', 'selected');", UFString(addname), UFString(fk2[0].ReferencedColumns[0].Name), LFString(addname));
 					});
 
 					string str_mvcdel = string.Format(@"
@@ -2416,13 +2425,13 @@ namespace {0}.BLL {{
 								}));
 							}
 							foreach (ForeignKeyInfo ffk in ffks) {
-								string FFK_uClass_Name = CodeBuild.UFString(ffk.Table.ClassName);
-								string FFK_nClass_Name = CodeBuild.UFString(ffk.Table.ClassName);
+								string FFK_uClass_Name = UFString(ffk.Table.ClassName);
+								string FFK_nClass_Name = UFString(ffk.Table.ClassName);
 
 								string urlQuerys = string.Empty;
 								ffk.Columns.ForEach(delegate (ColumnInfo col88) {
-									string FFK_csUName = CodeBuild.UFString(col.Name);
-									urlQuerys += string.Format("{0}=@item.{1}&", CodeBuild.UFString(col88.Name), FFK_csUName);
+									string FFK_csUName = UFString(col.Name);
+									urlQuerys += string.Format("{0}=@item.{1}&", UFString(col88.Name), FFK_csUName);
 								});
 								if (urlQuerys.Length > 0) urlQuerys = urlQuerys.Remove(urlQuerys.Length - 1);
 
@@ -2548,7 +2557,7 @@ namespace {0}.BLL {{
 		$('table#GridView1').treetable('expandAll');
 		top.mainViewInit();
 	}})();
-</script>", uClass_Name, CodeBuild.UFString(table.PrimaryKeys[0].Name), CodeBuild.UFString(ttfk.Columns[0].Name), "",
+</script>", uClass_Name, UFString(table.PrimaryKeys[0].Name), UFString(ttfk.Columns[0].Name), "",
 	pkUrlQuerys.Replace("a.", ""), pkHiddens.Replace("a.", ""), str_listTh.Replace("a.", ""), str_listTd.Replace("a.", ""), str_listTh1.Replace("a.", ""), str_listTd1.Replace("a.", ""));
 						loc1.Add(new BuildInfo(string.Concat(CONST.moduleAdminPath, @"Views\", uClass_Name, @"\List.cshtml"), Deflate.Compress(sb1.ToString())));
 						clearSb();
@@ -2558,7 +2567,7 @@ namespace {0}.BLL {{
 					#region wwwroot/xxx/add.html
 					foreach (ColumnInfo col in table.Columns) {
 						string csType = col.CsType;
-						string csUName = CodeBuild.UFString(col.Name);
+						string csUName = UFString(col.Name);
 						string lname = col.Name.ToLower();
 						string comment = _column_coments[table.FullName][col.Name];
 						string rfvEmpty = string.Empty;
@@ -2608,15 +2617,15 @@ namespace {0}.BLL {{
 						} else if (fks_comb.Count == 1) {
 							//外键下拉框
 							ForeignKeyInfo fkcb = fks_comb[0];
-							string FK_uClass_Name = fkcb.ReferencedTable != null ? CodeBuild.UFString(fkcb.ReferencedTable.ClassName) :
-								CodeBuild.UFString(TableInfo.GetClassName(fkcb.ReferencedTableName));
+							string FK_uClass_Name = fkcb.ReferencedTable != null ? UFString(fkcb.ReferencedTable.ClassName) :
+								UFString(TableInfo.GetClassName(fkcb.ReferencedTableName));
 							ForeignKeyInfo fkrr = fkcb.ReferencedTable != null ?
 										fkcb.ReferencedTable.ForeignKeys.Find(delegate (ForeignKeyInfo fkkk) {
 											return fkkk.ReferencedTable != null && fkcb.ReferencedTable.FullName == fkkk.ReferencedTable.FullName;
 										}) : null;
 							bool isParentSelect = fkcb.ReferencedTable != null && fkrr != null;
 							string FK_Column = fkcb.ReferencedTable != null ?
-										CodeBuild.UFString(fkcb.ReferencedColumns[0].Name) : CodeBuild.UFString(fkcb.ReferencedColumnNames[0]);
+										UFString(fkcb.ReferencedColumns[0].Name) : UFString(fkcb.ReferencedColumnNames[0]);
 
 							ColumnInfo strCol = fkcb.ReferencedTable.Columns.Find(delegate (ColumnInfo col99) {
 								return col99.Name.ToLower().IndexOf("name") != -1 || col99.Name.ToLower().IndexOf("title") != -1;
@@ -2624,7 +2633,7 @@ namespace {0}.BLL {{
 							if (strCol == null) strCol = fkcb.ReferencedTable.Columns.Find(delegate (ColumnInfo col99) {
 								return col99.CsType == "string" && col99.Length > 0 && col99.Length < 300;
 							});
-							string FK_Column_Text = fkcb.ReferencedTable != null && strCol != null ? CodeBuild.UFString(strCol.Name)
+							string FK_Column_Text = fkcb.ReferencedTable != null && strCol != null ? UFString(strCol.Name)
 								 : FK_Column;
 
 							if (isParentSelect) {
@@ -2635,7 +2644,7 @@ namespace {0}.BLL {{
 						</tr>", csUName, comment);
 								sb5.AppendFormat(@"
 		$('#{3}_td').html(yieldTreeSelect(yieldTreeArray(@Html.Json(fk_{0}s), null, '{1}', '{2}'), '{{#{4}}}', '{1}')).find('select').attr('name', '{3}');",
-			FK_uClass_Name, CodeBuild.UFString(fkcb.ReferencedColumns[0].Name), CodeBuild.UFString(fkrr.Columns[0].Name), csUName, FK_Column_Text);
+			FK_uClass_Name, UFString(fkcb.ReferencedColumns[0].Name), UFString(fkrr.Columns[0].Name), csUName, FK_Column_Text);
 							} else {
 								sb4.AppendFormat(@"
 						<tr>
@@ -2646,7 +2655,7 @@ namespace {0}.BLL {{
 									@foreach (var fk in fk_{4}s) {{ <option value=""@fk.{2}"">@fk.{3}</option> }}
 								</select>
 							</td>
-						</tr>", csUName, comment, CodeBuild.UFString(fkcb.ReferencedColumns[0].Name), FK_Column_Text, FK_uClass_Name);
+						</tr>", csUName, comment, UFString(fkcb.ReferencedColumns[0].Name), FK_Column_Text, FK_uClass_Name);
 							}
 							if (str_fk_getlist.Contains("	var fk_" + FK_uClass_Name + "s") == false)
 								str_fk_getlist += string.Format(@"

@@ -346,6 +346,6 @@ public static partial class Npgsql_ExtensionMethods {
 	public static string To1010(this BitArray ba) {
 		char[] ret = new char[ba.Length];
 		for (int a = 0; a < ba.Length; a++) ret[a] = ba[a] ? '1' : '0';
-		return ret.ToString();
+		return new string(ret);
 	}
 }
