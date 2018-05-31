@@ -1,7 +1,7 @@
 ﻿# dotnetGen_postgresql
-.NETCore + PostgreSQL 生成器
+.NETCore 2.1 + PostgreSQL 生成器
 
-本项目为生成器，用于快速创建和更新 .NETCore + PostgreSQL 项目，非常合适敏捷开发；
+本项目为生成器，用于快速创建和更新 .NETCore 2.1 + PostgreSQL 项目，非常合适敏捷开发；
 
 类型映射参考 http://www.postgres.cn/docs/9.4/datatype.html 开发；
 
@@ -10,10 +10,10 @@
  * 2、避免随意创建表，严格把控数据库，有标准的ER图；
  * 3、统一规范数据库操作类与方法，一条心堆业务；
 
+[下载生成器客户端试用](https://files.cnblogs.com/files/kellynic/%E7%94%9F%E6%88%90%E5%99%A8pgsql.zip)
+
 > MakeCode 已支持命令行，查看帮助可输入 cmd -> makecode ?
-
 > C:/Users/Administrator/Desktop/生成器PgSql/MakeCode 10.17.65.88:5432 -U postgres -P 123456 -D 数据库 -N 项目名 -O "X:/xxx/"
-
 > 开发过程中，修改表后执行命令可以快速更新SDK；
 
 共勉，一起学习QQ群：8578575
