@@ -34,13 +34,75 @@ namespace GenPg {
 			this.OutputPath = AppContext.BaseDirectory;
 			string args0 = args[0].Trim().ToLower();
 			if (args[0] == "?" || args0 == "--help" || args0 == "-help") {
-				Console.WriteLine(@"
-## .NETCore 2.1 + PostgreSQL 生成器 ##
+				var bgcolor = Console.BackgroundColor;
+				var fgcolor = Console.ForegroundColor;
+
+				Console.BackgroundColor = ConsoleColor.DarkCyan;
+				Console.ForegroundColor = ConsoleColor.White;
+				Console.Write("##");
+				Console.Write("######################################");
+				Console.Write("##");
+				Console.BackgroundColor = bgcolor;
+				Console.ForegroundColor = fgcolor;
+				Console.WriteLine("");
+
+				Console.BackgroundColor = ConsoleColor.DarkCyan;
+				Console.ForegroundColor = ConsoleColor.White;
+				Console.Write("##");
+				Console.BackgroundColor = ConsoleColor.DarkCyan;
+				Console.ForegroundColor = ConsoleColor.DarkRed;
+				Console.Write("                                      ");
+				Console.BackgroundColor = ConsoleColor.DarkCyan;
+				Console.ForegroundColor = ConsoleColor.White;
+				Console.Write("##");
+				Console.BackgroundColor = bgcolor;
+				Console.ForegroundColor = fgcolor;
+				Console.WriteLine("");
+
+				Console.BackgroundColor = ConsoleColor.DarkCyan;
+				Console.ForegroundColor = ConsoleColor.White;
+				Console.Write("##");
+				Console.BackgroundColor = ConsoleColor.DarkCyan;
+				Console.ForegroundColor = ConsoleColor.DarkRed;
+				Console.Write("   .NETCore 2.1 + PostgreSQL 生成器   ");
+				Console.BackgroundColor = ConsoleColor.DarkCyan;
+				Console.ForegroundColor = ConsoleColor.White;
+				Console.Write("##");
+				Console.BackgroundColor = bgcolor;
+				Console.ForegroundColor = fgcolor;
+				Console.WriteLine("");
+
+				Console.BackgroundColor = ConsoleColor.DarkCyan;
+				Console.ForegroundColor = ConsoleColor.White;
+				Console.Write("##");
+				Console.BackgroundColor = ConsoleColor.DarkCyan;
+				Console.ForegroundColor = ConsoleColor.DarkRed;
+				Console.Write("                                      ");
+				Console.BackgroundColor = ConsoleColor.DarkCyan;
+				Console.ForegroundColor = ConsoleColor.White;
+				Console.Write("##");
+				Console.BackgroundColor = bgcolor;
+				Console.ForegroundColor = fgcolor;
+				Console.WriteLine("");
+
+				Console.BackgroundColor = ConsoleColor.DarkCyan;
+				Console.ForegroundColor = ConsoleColor.White;
+				Console.Write("##");
+				Console.Write("######################################");
+				Console.Write("##");
+
+				Console.BackgroundColor = bgcolor;
+				Console.ForegroundColor = ConsoleColor.DarkCyan;
+				Console.Write(@"
 
 用于快速创建和更新 .NETCore 2.1 + PostgreSQL 项目，非常合适敏捷开发；
 Github: https://github.com/2881099/dotnetgen_postgresql
 
-Example：
+");
+				Console.ForegroundColor = ConsoleColor.DarkCyan;
+				Console.Write("Example：");
+				Console.ForegroundColor = fgcolor;
+				Console.WriteLine(@"
 
 	> GenPg 127.0.0.1[:5432] -U postgres -P 123456 -D dyschool -N dyschool -S -A -R
 
