@@ -12,6 +12,8 @@
 
 [下载生成器客户端试用](https://files.cnblogs.com/files/kellynic/%E7%94%9F%E6%88%90%E5%99%A8pgsql.zip)
 
+或者使用 dotnet tool install -g GenPg
+
 > MakeCode 已支持命令行，查看帮助可输入 cmd -> makecode ?
 > C:/Users/Administrator/Desktop/生成器PgSql/MakeCode 10.17.65.88:5432 -U postgres -P 123456 -D 数据库 -N 项目名 -O "X:/xxx/"
 > 开发过程中，修改表后执行命令可以快速更新SDK；

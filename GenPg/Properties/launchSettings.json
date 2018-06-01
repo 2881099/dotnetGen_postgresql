@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "GenPg": {
+      "commandName": "Project",
+      "commandLineArgs": "t.com:5432 -U postgres -P 123456 -D npg4 -N n4 -S -A -R -O \"C:\\Users\\Administrator\\Desktop\\新建文件夹 (2)\""
+    }
+  }
+}

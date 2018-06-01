@@ -332,10 +332,10 @@ from pg_type a
 inner join pg_enum b on b.enumtypid = a.oid
 inner join pg_namespace ns on ns.oid = a.typnamespace
 where a.typtype = 'e' and ns.nspname in ('{0}')", string.Join("','", owners.ToArray()));
-			DataSet ds = this.GetDataSet(sql);
+			object[][] ds = this.GetDataSet(sql);
 			Dictionary<string, string> _types = new Dictionary<string, string>();
 			int unknow_idx = 0;
-			foreach (DataRow dr in ds.Tables[0].Rows) {
+			foreach (object[] dr in ds) {
 				string dr1 = string.Concat(dr[0]);
 				string dr2 = string.Concat(dr[1]);
 				dr1 = UFString(dr1.StartsWith("public.") ? dr1.Substring(7) : dr1.Replace(".", "_"));
@@ -408,7 +408,7 @@ where ns.nspname || '.' || a.typname not in ('public.reclassarg','public.geomval
 and ns.nspname in ('{0}')", string.Join("','", owners.ToArray()));
 			ds = this.GetDataSet(sql);
 			_types = new Dictionary<string, string>();
-			foreach (DataRow dr in ds.Tables[0].Rows) {
+			foreach (object[] dr in ds) {
 				string dr1 = string.Concat(dr[0]);
 				string dr2 = string.Concat(dr[1]);
 				string type = string.Concat(dr[2]);

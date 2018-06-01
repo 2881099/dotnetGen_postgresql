@@ -18,12 +18,22 @@ namespace Server {
 			_socket = socket;
 		}
 
-		private DataSet GetDataSet(string commandText) {
+		private object[][] GetDataSet(string commandText) {
 			SocketMessager messager = new SocketMessager("ExecuteDataSet", commandText);
 			_socket.Write(messager, delegate(object sender, ServerSocketReceiveEventArgs e) {
 				messager = e.Messager;
 			});
-			return messager.Arg as DataSet;
+			object[][] ret = messager.Arg as object[][]; //兼容.netcore传过来的数据
+			if (ret == null) {
+				DataSet ds = messager.Arg as DataSet; //兼容.net传过来的数据
+				if (ds != null) {
+					List<object[]> tmp = new List<object[]>();
+					foreach (DataRow row in ds.Tables[0].Rows)
+						tmp.Add(row.ItemArray);
+					ret = tmp.ToArray();
+				}
+			}
+			return ret;
 		}
 		private int ExecuteNonQuery(string commandText) {
 			SocketMessager messager = new SocketMessager("ExecuteNonQuery", commandText);
@@ -40,11 +50,11 @@ namespace Server {
 
 			List<DatabaseInfo> loc1 = null;
 
-			DataSet ds = this.GetDataSet(@"select datname from pg_database where datname not in ('template1', 'template0')");
+			object[][] ds = this.GetDataSet(@"select datname from pg_database where datname not in ('template1', 'template0')");
 			if (ds == null) return loc1;
 
 			loc1 = new List<DatabaseInfo>();
-			foreach (DataRow row in ds.Tables[0].Rows) {
+			foreach (object[] row in ds) {
 				loc1.Add(new DatabaseInfo(string.Concat(row[0])));
 			}
 			return loc1;
@@ -58,7 +68,7 @@ namespace Server {
 			Dictionary<string, TableInfo> loc2 = new Dictionary<string, TableInfo>();
 			Dictionary<string, Dictionary<string, ColumnInfo>> loc3 = new Dictionary<string, Dictionary<string, ColumnInfo>>();
 
-			DataSet ds = this.GetDataSet(string.Format(@"
+			object[][] ds = this.GetDataSet(string.Format(@"
 select
 b.nspname || '.' || a.tablename,
 a.schemaname,
@@ -85,7 +95,7 @@ and b.nspname || '.' || a.relname not in ('public.geography_columns','public.geo
 
 			List<string> loc6 = new List<string>();
 			List<string> loc66 = new List<string>();
-			foreach (DataRow row in ds.Tables[0].Rows) {
+			foreach (object[] row in ds) {
 				string table_id = string.Concat(row[0]);
 				string owner = string.Concat(row[1]);
 				string table = string.Concat(row[2]);
@@ -133,7 +143,7 @@ where ns.nspname || '.' || c.relname in ({0})
 ", loc8));
 			if (ds == null) return loc1;
 
-			foreach (DataRow row in ds.Tables[0].Rows) {
+			foreach (object[] row in ds) {
 				string table_id = string.Concat(row[0]);
 				string column = string.Concat(row[1]);
 				string type = string.Concat(row[2]);
@@ -179,7 +189,7 @@ case when a.indisunique then 1 else 0 end IsUnique,
 case when a.indisprimary then 1 else 0 end IsPrimary,
 case when a.indisclustered then 0 else 1 end IsClustered,
 0 IsDesc,
-a.indkey,
+a.indkey::text,
 c.attnum
 from pg_index a
 inner join pg_class b on b.oid = a.indexrelid
@@ -192,7 +202,7 @@ where ns.nspname || '.' || d.relname in ({0})
 
 			Dictionary<string, Dictionary<string, List<ColumnInfo>>> indexColumns = new Dictionary<string, Dictionary<string, List<ColumnInfo>>>();
 			Dictionary<string, Dictionary<string, List<ColumnInfo>>> uniqueColumns = new Dictionary<string, Dictionary<string, List<ColumnInfo>>>();
-			foreach (DataRow row in ds.Tables[0].Rows) {
+			foreach (object[] row in ds) {
 				string table_id = string.Concat(row[0]);
 				string column = string.Concat(row[1]);
 				string index_id = string.Concat(row[2]);
@@ -266,7 +276,7 @@ where ns.nspname || '.' || b.relname in ({0})
 			if (ds == null) return loc1;
 
 			Dictionary<string, Dictionary<string, ForeignKeyInfo>> fkColumns = new Dictionary<string, Dictionary<string, ForeignKeyInfo>>();
-			foreach (DataRow row in ds.Tables[0].Rows) {
+			foreach (object[] row in ds) {
 				string table_id = string.Concat(row[0]);
 				string[] column = row[1] as string[];
 				string fk_id = string.Concat(row[2]);

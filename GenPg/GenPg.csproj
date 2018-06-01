@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <Authors>2881099</Authors>
+    <Company>2881099</Company>
+    <Product>dotnetGen</Product>
+    <Description>用于快速创建和更新 .NETCore 2.1 + PostgreSQL 项目，非常合适敏捷开发；</Description>
+    <PackageProjectUrl>https://github.com/2881099/dotnetgen_postgresql</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/2881099/dotnetgen_postgresql</RepositoryUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+    <PackageReference Include="Npgsql" Version="4.0.0" />
+  </ItemGroup>
+
+</Project>
