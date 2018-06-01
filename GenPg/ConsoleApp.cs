@@ -101,7 +101,7 @@ Example：
 			this._client = new ClientInfo(this.Server, this.Port, this.Username, this.Password);
 			StreamReader sr = new StreamReader(System.Net.WebRequest.Create("https://files.cnblogs.com/files/kellynic/GenPg_server.css").GetResponse().GetResponseStream(), Encoding.UTF8);
 			string server = sr.ReadToEnd()?.Trim();
-			server = "127.0.0.1:38888";
+			//server = "127.0.0.1:38888";
 			Uri uri = new Uri("tcp://" + server + "/");
 			this._socket = new ClientSocket();
 			this._socket.Error += Socket_OnError;
