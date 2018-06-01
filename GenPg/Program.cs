@@ -14,7 +14,6 @@ namespace GenPg
 				ConsoleApp app = new ConsoleApp(args, wait);
 			}).Start();
 			wait.WaitOne();
-			Console.ReadKey();
 			return;
 		}
     }
