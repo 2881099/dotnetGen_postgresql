@@ -1318,24 +1318,24 @@ namespace {0}.DAL {{
 						if (col.Attndims > 0) {
 							sb5.AppendFormat(@"
 			public SqlUpdateBuild Set{0}({2} value) {{
-				_setQs.Enqueue(ni => _item.{0} = ni.{0});
+				if (_item != null && _setAs.ContainsKey(""{0}"") == false) _setAs.Add(""{0}"", ni => _item.{0} = ni.{0});
 				return this.Set(@""""""{1}"""""", $""@{1}_{{_parameters.Count}}"", 
 					{3}value }});
 			}}
 			public SqlUpdateBuild Set{0}Join({2} value) {{
-				_setQs.Enqueue(ni => _item.{0} = ni.{0});
+				if (_item != null && _setAs.ContainsKey(""{0}"") == false) _setAs.Add(""{0}"", ni => _item.{0} = ni.{0});
 				return this.Set(@""""""{1}"""""", $@""""""{1}"""" || @{1}_{{_parameters.Count}}"", 
 					{3}value }});
 			}}
 			public SqlUpdateBuild Set{0}Remove({4} value) {{
-				_setQs.Enqueue(ni => _item.{0} = ni.{0});
+				if (_item != null && _setAs.ContainsKey(""{0}"") == false) _setAs.Add(""{0}"", ni => _item.{0} = ni.{0});
 				return this.Set(@""""""{1}"""""", $@""array_remove(""""{1}"""", @{1}_{{_parameters.Count}})"", 
 					{5}value }});
 			}}", UFString(col.Name), col.Name, col.CsType, valueParm2, arrType, valueParm2.Replace("NpgsqlDbType.Array | ", ""));
 						}
 						sb5.AppendFormat(@"
 			public SqlUpdateBuild Set{0}({2} value{4}) {{
-				_setQs.Enqueue(ni => _item.{0} = ni.{0});
+				if (_item != null && _setAs.ContainsKey(""{0}"") == false) _setAs.Add(""{0}"", ni => _item.{0} = ni.{0});
 				return this.Set({6}@""""""{1}""""{5}"", $""@{1}_{{_parameters.Count}}"", 
 					{3}value }});
 			}}", UFString(col.Name), col.Name, arrType, valueParm2.Replace("NpgsqlDbType.Array | ", ""), arrParm, arrUndeSql, string.IsNullOrEmpty(arrUndeSql) ? "" : "$");
@@ -1349,7 +1349,7 @@ namespace {0}.DAL {{
 								fptype = "";
 								sb5.AppendFormat(@"
 			public SqlUpdateBuild Set{0}Flag(int _0_16{4}, bool isUnFlag = false) {{
-				_setQs.Enqueue(ni => _item.{0} = ni.{0});
+				if (_item != null && _setAs.ContainsKey(""{0}"") == false) _setAs.Add(""{0}"", ni => _item.{0} = ni.{0});
 				{2} tmp1 = ({2})Math.Pow(2, _0_16);
 				return this.Set({7}@""""""{1}""""{5}"", $@""nullif(""""{1}""""{6},0) {{(isUnFlag ? '^' : '|')}} @{1}_{{_parameters.Count}}"", 
 					{3}tmp1 }});
@@ -1362,7 +1362,7 @@ namespace {0}.DAL {{
 							if (!string.IsNullOrEmpty(fptype)) {
 								sb5.AppendFormat(@"
 			public SqlUpdateBuild Set{0}Increment({2} value{4}) {{
-				_setQs.Enqueue(ni => _item.{0} = ni.{0});
+				if (_item != null && _setAs.ContainsKey(""{0}"") == false) _setAs.Add(""{0}"", ni => _item.{0} = ni.{0});
 				return this.Set({7}@""""""{1}""""{5}"", $@""COALESCE(""""{1}""""{6}, 0) + @{1}_{{_parameters.Count}}"", 
 					{3}value }});
 			}}", UFString(col.Name), col.Name, fptype, valueParm2.Replace("NpgsqlDbType.Array | ", ""),
@@ -1392,17 +1392,19 @@ namespace {0}.DAL {{
 {1}
 
 		public SqlUpdateBuild Update({0}Info item) {{
-			return new SqlUpdateBuild(null, item.{7}){8};
+			return new SqlUpdateBuild(null, item, item.{7}){8};
 		}}
 		#region class SqlUpdateBuild
 		public partial class SqlUpdateBuild {{
 			protected {0}Info _item;
+			protected {0}Info _cacheItem;
 			protected string _fields;
 			protected string _where;
 			protected List<NpgsqlParameter> _parameters = new List<NpgsqlParameter>();
-			protected Queue<Action<{0}Info>> _setQs = new Queue<Action<{0}Info>>();
-			public SqlUpdateBuild({0}Info item, {3}) {{
+			protected Dictionary<string, Action<{0}Info>> _setAs = new Dictionary<string, Action<{0}Info>>();
+			public SqlUpdateBuild({0}Info item, {0}Info cacheItem, {3}) {{
 				_item = item;
+				_cacheItem = cacheItem;
 				_where = PSqlHelper.Addslashes(@""{4}"", {5});
 			}}
 			public SqlUpdateBuild() {{ }}
@@ -1414,25 +1416,35 @@ namespace {0}.DAL {{
 			public int ExecuteNonQuery() {{
 				string sql = this.ToString();
 				if (string.IsNullOrEmpty(sql)) return 0;
-				if (_item == null) return PSqlHelper.ExecuteNonQuery(sql, _parameters.ToArray());
+				if (_item == null) {{
+					var affrows = PSqlHelper.ExecuteNonQuery(sql, _parameters.ToArray());
+					if (_cacheItem != null) BLL.{0}.RemoveCache(_cacheItem);
+					return affrows;
+				}}
 				{0}Info newitem = null;
 				PSqlHelper.ExecuteReader(dr => {{
 					newitem = BLL.{0}.dal.GetItem(dr);
 				}}, sql + TSQL.Returning, _parameters.ToArray());
+				if (_cacheItem != null) BLL.{0}.RemoveCache(_cacheItem);
 				if (newitem == null) return 0;
-				while (_setQs.Count > 0) _setQs.Dequeue()(newitem);
+				foreach (var a in _setAs.Values) a(newitem);
 				return 1;
 			}}
 			async public Task<int> ExecuteNonQueryAsync() {{
 				string sql = this.ToString();
 				if (string.IsNullOrEmpty(sql)) return 0;
-				if (_item == null) return await PSqlHelper.ExecuteNonQueryAsync(sql, _parameters.ToArray());
+				if (_item == null) {{
+					var affrows = await PSqlHelper.ExecuteNonQueryAsync(sql, _parameters.ToArray());
+					if (_cacheItem != null) await BLL.{0}.RemoveCacheAsync(_cacheItem);
+					return affrows;
+				}}
 				{0}Info newitem = null;
 				await PSqlHelper.ExecuteReaderAsync(async dr => {{
 					newitem = await BLL.{0}.dal.GetItemAsync(dr);
 				}}, sql + TSQL.Returning, _parameters.ToArray());
+				if (_cacheItem != null) await BLL.{0}.RemoveCacheAsync(_cacheItem);
 				if (newitem == null) return 0;
-				while (_setQs.Count > 0) _setQs.Dequeue()(newitem);
+				foreach (var a in _setAs.Values) a(newitem);
 				return 1;
 			}}
 			public SqlUpdateBuild Where(string filterFormat, params object[] values) {{
@@ -1551,27 +1563,31 @@ namespace {0}.BLL {{
 					if (uniques_dic.Count > 1)
 						sb2.AppendFormat(@"
 		public static int Delete{2}({0}) {{
+			var affrows = dal.Delete{2}({1});
 			if (itemCacheTimeout > 0) RemoveCache(GetItem{2}({1}));
-			return dal.Delete{2}({1});
+			return affrows;
 		}}", parms, parmsNoneType, cs[0].IsPrimaryKey ? string.Empty : parmsBy);
 					else
 						sb2.AppendFormat(@"
 		public static int Delete{2}({0}) {{
+			var affrows = dal.Delete{2}({1});
 			if (itemCacheTimeout > 0) RemoveCache(new {3}Info {{ {4} }});
-			return dal.Delete{2}({1});
+			return affrows;
 		}}", parms, parmsNoneType, cs[0].IsPrimaryKey ? string.Empty : parmsBy, uClass_Name, parmsNewItem);
 
 					if (uniques_dic.Count > 1)
 						bll_async_code += string.Format(@"
 		async public static Task<int> Delete{2}Async({0}) {{
+			var affrows = await dal.Delete{2}Async({1});
 			if (itemCacheTimeout > 0) await RemoveCacheAsync(GetItem{2}({1}));
-			return await dal.Delete{2}Async({1});
+			return affrows;
 		}}", parms, parmsNoneType, cs[0].IsPrimaryKey ? string.Empty : parmsBy);
 					else
 						bll_async_code += string.Format(@"
 		async public static Task<int> Delete{2}Async({0}) {{
+			var affrows = await dal.Delete{2}Async({1});
 			if (itemCacheTimeout > 0) await RemoveCacheAsync(new {3}Info {{ {4} }});
-			return await dal.Delete{2}Async({1});
+			return affrows;
 		}}", parms, parmsNoneType, cs[0].IsPrimaryKey ? string.Empty : parmsBy, uClass_Name, parmsNewItem);
 
 
@@ -1618,23 +1634,13 @@ namespace {0}.BLL {{
 ", sb2.ToString());
 					if (uniques_dic.Count > 1)
 						sb1.AppendFormat(@"
-		public static int Update({1}Info item) {{
-			if (itemCacheTimeout > 0) RemoveCache(item);
-			return dal.Update(item).ExecuteNonQuery();
-		}}
-		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy({2}) {{
-			return UpdateDiy(null, {3});
-		}}
-		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy({1}Info item, {2}) {{
-			if (itemCacheTimeout > 0) RemoveCache(item != null ? item : GetItem({3}));
-			return new {0}.DAL.{1}.SqlUpdateBuild(item, {3});
-		}}
+		public static int Update({1}Info item) => dal.Update(item).ExecuteNonQuery();
+		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy({2}) => UpdateDiy(null, {3});
+		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy({1}Info item, {2}) => new {0}.DAL.{1}.SqlUpdateBuild(item, itemCacheTimeout > 0 ? (item ?? GetItem({3})) : null, {3});
 		/// <summary>
-		/// 用于批量更新
+		/// 用于批量更新，不会更新缓存
 		/// </summary>
-		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiyDangerous {{
-			get {{ return new {0}.DAL.{1}.SqlUpdateBuild(); }}
-		}}
+		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiyDangerous => new {0}.DAL.{1}.SqlUpdateBuild();
 ", solutionName, uClass_Name, pkCsParam.Replace("?", ""), pkCsParamNoType);
 					else {
 						var xxxxtempskdf = "";
@@ -1642,31 +1648,18 @@ namespace {0}.BLL {{
 							xxxxtempskdf += xxxxtempskdfstr + " = " + xxxxtempskdfstr + ", ";
 						}
 						sb1.AppendFormat(@"
-		public static int Update({1}Info item) {{
-			if (itemCacheTimeout > 0) RemoveCache(item);
-			return dal.Update(item).ExecuteNonQuery();
-		}}
-		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy({2}) {{
-			return UpdateDiy(null, {3});
-		}}
-		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy({1}Info item, {2}) {{
-			if (itemCacheTimeout > 0) RemoveCache(item ?? new {1}Info {{ {4} }});
-			return new {0}.DAL.{1}.SqlUpdateBuild(item, {3});
-		}}
+		public static int Update({1}Info item) => dal.Update(item).ExecuteNonQuery();
+		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy({2}) => UpdateDiy(null, {3});
+		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy({1}Info item, {2}) => new {0}.DAL.{1}.SqlUpdateBuild(item, itemCacheTimeout > 0 ? (item ?? new {1}Info {{ {4} }}) : null, {3});
 		/// <summary>
-		/// 用于批量更新
+		/// 用于批量更新，不会更新缓存
 		/// </summary>
-		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiyDangerous {{
-			get {{ return new {0}.DAL.{1}.SqlUpdateBuild(); }}
-		}}
+		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiyDangerous => new {0}.DAL.{1}.SqlUpdateBuild();
 ", solutionName, uClass_Name, pkCsParam.Replace("?", ""), pkCsParamNoType, xxxxtempskdf.Substring(0, xxxxtempskdf.Length - 2));
 					}
 
 					bll_async_code += string.Format(@"
-		async public static Task<int> UpdateAsync({1}Info item) {{
-			if (itemCacheTimeout > 0) await RemoveCacheAsync(item);
-			return await dal.Update(item).ExecuteNonQueryAsync();
-		}}
+		async public static Task<int> UpdateAsync({1}Info item) => await dal.Update(item).ExecuteNonQueryAsync();
 ", solutionName, uClass_Name);
 
 					if (table.Columns.Count > 5)
@@ -1703,8 +1696,8 @@ namespace {0}.BLL {{
 			if (itemCacheTimeout > 0) RemoveCache(item);
 			return item;
 		}}
-		private static void RemoveCache({0}Info item) {{
-			if (item == null) return;{2}
+		internal static void RemoveCache({0}Info item) {{
+			if (itemCacheTimeout <= 0 || item == null) return;{2}
 		}}
 		#endregion
 {1}
@@ -1715,8 +1708,8 @@ namespace {0}.BLL {{
 			if (itemCacheTimeout > 0) await RemoveCacheAsync(item);
 			return item;
 		}}
-		async private static Task RemoveCacheAsync({0}Info item) {{
-			if (item == null) return;{2}
+		async internal static Task RemoveCacheAsync({0}Info item) {{
+			if (itemCacheTimeout <= 0 || item == null) return;{2}
 		}}
 ", uClass_Name, "", redisRemove.Replace("RedisHelper.Remove", "await RedisHelper.RemoveAsync"), cspk2GuidSetValue);
 					#endregion
@@ -2905,6 +2898,12 @@ namespace {0}.BLL {{
 				#region readme.md
 				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"..\readme.md"), Deflate.Compress(string.Format(@"# {0}
 .net core模块化开发架构", solutionName))));
+				clearSb();
+				#endregion
+				
+				#region GenPg只更新db.bat
+				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"..\GenPg只更新db.bat"), Deflate.Compress(string.Format(@"
+GenPg {0}:{1} -U {2} -P {3} -D {4} -N {5}", _client.Server, _client.Port, _client.Username, _client.Password, _client.Database, solutionName))));
 				clearSb();
 				#endregion
 			}
