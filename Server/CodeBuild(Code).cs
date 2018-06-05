@@ -542,6 +542,7 @@ using System.Linq;
 using System.Reflection;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NpgsqlTypes;
@@ -840,7 +841,7 @@ namespace {0}.Model {{
 						if (columnInfo.IsPrimaryKey) pkNamesNoneType += string.Format(GetCSTypeValue(columnInfo.Type), UFString(columnInfo.Name)) + ", ";
 						//UFString(columnInfo.Name) + ", ";
 						else if (columnInfo.Name.ToLower() == "create_time" && columnInfo.CsType == "DateTime?") ;
-						else updateDiySet += string.Format("\r\n\t\t\t\t\t.Set{0}({0})", UFString(columnInfo.Name));
+						else updateDiySet += string.Format("\r\n\t\t\t\t.Set{0}({0})", UFString(columnInfo.Name));
 
 						if (columnInfo.IsIdentity) {
 							//parmsNoneType2 += "0, ";
@@ -916,9 +917,12 @@ namespace {0}.Model {{
 					if (pkNamesNoneType.Length > 0) pkNamesNoneType = pkNamesNoneType.Remove(pkNamesNoneType.Length - 2);
 
 					if (add_or_flag == "Flag") {
-						if (parms1 != parms2)
+						if (parms1 != parms2) {
 							sb6.AppendFormat(@"
 		public {0}Info Flag{1}({2}) => Flag{1}({3});", UFString(t2.ClassName), UFString(addname_schema), parms1, parmsNoneType1);
+							sb16.AppendFormat(@"
+		async public Task<{0}Info> Flag{1}Async({2}) => await Flag{1}Async({3});", UFString(t2.ClassName), UFString(addname_schema), parms1, parmsNoneType1);
+						}
 						sb6.AppendFormat(@"
 		public {0}Info Flag{1}({2}) {{
 			{0}Info item = BLL.{0}.GetItem({5});
@@ -926,15 +930,33 @@ namespace {0}.Model {{
 			return item;
 		}}
 ", UFString(t2.ClassName), UFString(addname_schema), parms2, parmsNoneType2.Replace("\t\t\t", "\t\t\t\t"), solutionName, pkNamesNoneType, updateDiySet.Length > 0 ? "\r\n\t\t\telse item.UpdateDiy" + updateDiySet + ".ExecuteNonQuery();" : string.Empty);
+						sb16.AppendFormat(@"
+		async public Task<{0}Info> Flag{1}Async({2}) {{
+			{0}Info item = await BLL.{0}.GetItemAsync({5});
+			if (item == null) item = await BLL.{0}.InsertAsync(new {0}Info {{{3}}});{6}
+			return item;
+		}}
+", UFString(t2.ClassName), UFString(addname_schema), parms2, parmsNoneType2.Replace("\t\t\t", "\t\t\t\t"), solutionName, pkNamesNoneType, updateDiySet.Length > 0 ? "\r\n\t\t\telse await item.UpdateDiy" + updateDiySet + ".ExecuteNonQueryAsync();" : string.Empty);
+
 					} else {
 						//sb6.Append(addname + "," + t2.Name);
-						if (parms1_add != parms2_add)
+						if (parms1_add != parms2_add) {
 							sb6.AppendFormat(@"
 		public {0}Info Add{1}({2}) => Add{1}({3});", UFString(t2.ClassName), UFString(addname_schema), parms1_add, parmsNoneType1_add);
+							sb16.AppendFormat(@"
+		async public Task<{0}Info> Add{1}Async({2}) => await Add{1}Async({3});", UFString(t2.ClassName), UFString(addname_schema), parms1_add, parmsNoneType1_add);
+
+						}
 						sb6.AppendFormat(@"
 		public {0}Info Add{1}({2}) => Add{1}(new {0}Info {{{3}}});
 		public {0}Info Add{1}({0}Info item) {{{5}
 			return item.Save();
+		}}
+", UFString(t2.ClassName), UFString(addname_schema), parms2_add, parmsNoneType2_add, solutionName, parmsNoneType5);
+						sb16.AppendFormat(@"
+		async public Task<{0}Info> Add{1}Async({2}) => await Add{1}Async(new {0}Info {{{3}}});
+		async public Task<{0}Info> Add{1}Async({0}Info item) {{{5}
+			return await item.SaveAsync();
 		}}
 ", UFString(t2.ClassName), UFString(addname_schema), parms2_add, parmsNoneType2_add, solutionName, parmsNoneType5);
 					}
@@ -952,6 +974,13 @@ namespace {0}.Model {{
 		public int Unflag{1}({2}) => Unflag{1}({3});
 		public int Unflag{1}({4}) => BLL.{0}.Delete{9}({5});
 		public int Unflag{1}ALL() => BLL.{0}.DeleteBy{8}(this.{7});
+", UFString(t2.ClassName), UFString(addname_schema), parms3, parmsNoneType3, parms4, parmsNoneType4,
+	solutionName, string.Format(GetCSTypeValue(table.PrimaryKeys[0].Type), UFString(table.PrimaryKeys[0].Name)),
+							UFString(fk.Columns[0].Name), deleteByUniqui);
+						sb16.AppendFormat(@"
+		async public Task<int> Unflag{1}Async({2}) => await Unflag{1}Async({3});
+		async public Task<int> Unflag{1}Async({4}) => await BLL.{0}.Delete{9}Async({5});
+		async public Task<int> Unflag{1}ALLAsync() => await BLL.{0}.DeleteBy{8}Async(this.{7});
 ", UFString(t2.ClassName), UFString(addname_schema), parms3, parmsNoneType3, parms4, parmsNoneType4,
 	solutionName, string.Format(GetCSTypeValue(table.PrimaryKeys[0].Type), UFString(table.PrimaryKeys[0].Name)),
 							UFString(fk.Columns[0].Name), deleteByUniqui);
@@ -1006,12 +1035,21 @@ namespace {0}.Model {{
 						}
 					} else {
 						string f2 = fk.Columns[0].Name.CompareTo("parent_id") == 0 ? t2name : fk.Columns[0].Name.Replace(tablename + "_" + table.PrimaryKeys[0].Name, "") + LFString(t2name);
-						string objs_value = string.Format(@"
+						if (fk.Columns[0].IsPrimaryKey && fk.Table.PrimaryKeys.Count == 1) { //1对1关系，不应该生成 obj_xxxs
+							string obj_value = string.Format(@"
+		private {0}Info _obj_{1};
+		public {0}Info Obj_{1} => _obj_{1} ?? (_{4} == null ? null : (_obj_{1} = BLL.{0}.GetItem(_{5})));", UFString(t2.ClassName), f2, solutionName, UFString(fk.Columns[0].Name), UFString(table.PrimaryKeys[0].Name), string.Format(GetCSTypeValue(table.PrimaryKeys[0].Type), UFString(table.PrimaryKeys[0].Name)));
+							string objs_key = string.Format("Obj_{0}", f2);
+							if (!dic_objs.ContainsKey(objs_key))
+								dic_objs.Add(objs_key, obj_value);
+						} else {
+							string objs_value = string.Format(@"
 		private List<{0}Info> _obj_{1}s;
 		public List<{0}Info> Obj_{1}s => _obj_{1}s ?? (_obj_{1}s = BLL.{0}.SelectBy{3}(_{4}).Limit(500).ToList());", UFString(t2.ClassName), f2, solutionName, UFString(fk.Columns[0].Name), UFString(table.PrimaryKeys[0].Name));
-						string objs_key = string.Format("Obj_{0}s", f2);
-						if (!dic_objs.ContainsKey(objs_key))
-							dic_objs.Add(objs_key, objs_value);
+							string objs_key = string.Format("Obj_{0}s", f2);
+							if (!dic_objs.ContainsKey(objs_key))
+								dic_objs.Add(objs_key, objs_value);
+						}
 					}
 				});
 				string[] dic_objs_values = new string[dic_objs.Count];
@@ -1022,6 +1060,7 @@ namespace {0}.Model {{
 				innerjoinObjs.Values.CopyTo(innerjoinObjs_values, 0);
 				sb9.Append(string.Join("", innerjoinObjs_values));
 
+				string pkupdatediy = "";
 				if (table.PrimaryKeys.Count > 0) {
 					string newguid = "";
 					foreach (ColumnInfo guidpk in table.PrimaryKeys)
@@ -1041,6 +1080,16 @@ namespace {0}.Model {{
 		}}", solutionName, uClass_Name, colUpdateTime != null ? @"
 			this." + UFString(colUpdateTime.Name) + " = DateTime.Now;" : "", colCreateTime != null ? @"
 			this." + UFString(colCreateTime.Name) + " = DateTime.Now;" : "", pkCsParamNoType.Replace(", ", " != null && this."), newguid));
+						sb16.Insert(0, string.Format(@"
+		async public Task<{1}Info> SaveAsync() {{{2}
+			if (this.{4} != null) {{
+				await BLL.{1}.UpdateAsync(this);
+				return this;
+			}}{5}{3}
+			return await BLL.{1}.InsertAsync(this);
+		}}", solutionName, uClass_Name, colUpdateTime != null ? @"
+			this." + UFString(colUpdateTime.Name) + " = DateTime.Now;" : "", colCreateTime != null ? @"
+			this." + UFString(colCreateTime.Name) + " = DateTime.Now;" : "", pkCsParamNoType.Replace(", ", " != null && this."), newguid));
 					}
 					string[] pkisnullfields = pkCsParamNoTypeByval.Split(new string[] { ", " }, StringSplitOptions.None);
 					string pkisnull = "";
@@ -1049,8 +1098,9 @@ namespace {0}.Model {{
 					}
 					string pkisnullf3 = "";
 					if (!string.IsNullOrEmpty(pkisnull)) pkisnullf3 = string.Format("{0} ? null : ", pkisnull.Substring(0, pkisnull.Length - 4));
-					sb6.Insert(0, string.Format(@"
-		public {0}.DAL.{1}.SqlUpdateBuild UpdateDiy => {3}BLL.{1}.UpdateDiy(this, _{2});", solutionName, uClass_Name, pkCsParamNoTypeByval.Replace(", ", ", _"), pkisnullf3));
+					pkupdatediy = string.Format(@"
+		public {0}.DAL.{1}.SqlUpdateBuild UpdateDiy => {3}BLL.{1}.UpdateDiy(this, _{2});
+", solutionName, uClass_Name, pkCsParamNoTypeByval.Replace(", ", ", _"), pkisnullf3);
 				}
 
 				sb1.AppendFormat(
@@ -1092,8 +1142,15 @@ namespace {0}.Model {{
 		#region properties
 {4}{9}
 		#endregion
+{14}
+		#region sync methods
 {5}
-	}}{11}
+		#endregion
+
+		#region async methods
+{11}
+		#endregion
+	}}
 }}
 
 ", uClass_Name, "", "", sb5.ToString(), sb2.ToString(), sb6.ToString(), table.Columns.Count, sb7.ToString(), sb8.ToString(), sb9.ToString(), sb10.ToString(), sb16.ToString(),
@@ -1101,7 +1158,7 @@ namespace {0}.Model {{
 		return fccc.Name.ToLower() == "item";
 	}) == null ? "" : "//", table.Columns.Find(delegate (ColumnInfo fccc2) {
 		return fccc2.Type == NpgsqlDbType.Geometry;
-	}) == null ? "" : ", new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All }");
+	}) == null ? "" : ", new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All }", pkupdatediy);
 
 				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, solutionName, @".db\Model\", basicName, @"\", uClass_Name, "Info.cs"), Deflate.Compress(Is_System_ComponentModel ? sb1.ToString().Replace("using System.Reflection;", "using System.ComponentModel;\r\nusing System.Reflection;") : sb1.ToString())));
 				clearSb();
@@ -2897,7 +2954,7 @@ namespace {0}.BLL {{
 				#endregion
 				#region readme.md
 				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, @"..\readme.md"), Deflate.Compress(string.Format(@"# {0}
-.net core模块化开发架构", solutionName))));
+.net core模块化开发框架", solutionName))));
 				clearSb();
 				#endregion
 				
