@@ -132,7 +132,7 @@ namespace {0}.DAL {{
 
 		public static string Addslashes(string filter, params object[] parms) {{ return Executer.Addslashes(filter, parms); }}
 
-		public static void ExecuteReader(Action<NpgsqlDataReader> readerHander, string cmdText, params NpgsqlParameter[] cmdParms) =>Instance.ExecuteReader(readerHander, CommandType.Text, cmdText, cmdParms);
+		public static void ExecuteReader(Action<NpgsqlDataReader> readerHander, string cmdText, params NpgsqlParameter[] cmdParms) => Instance.ExecuteReader(readerHander, CommandType.Text, cmdText, cmdParms);
 		public static object[][] ExeucteArray(string cmdText, params NpgsqlParameter[] cmdParms) => Instance.ExeucteArray(CommandType.Text, cmdText, cmdParms);
 		public static int ExecuteNonQuery(string cmdText, params NpgsqlParameter[] cmdParms) => Instance.ExecuteNonQuery(CommandType.Text, cmdText, cmdParms);
 		public static object ExecuteScalar(string cmdText, params NpgsqlParameter[] cmdParms) => Instance.ExecuteScalar(CommandType.Text, cmdText, cmdParms);

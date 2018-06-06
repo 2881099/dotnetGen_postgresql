@@ -1491,12 +1491,11 @@ namespace {0}.DAL {{
 					BLL.{0}.RemoveCache(_dataSource);
 					return affrows;
 				}}
-				List<{0}Info> newitems = null;
+				var newitems = new List<{0}Info>();
 				PSqlHelper.ExecuteReader(dr => {{
 					while (dr.Read()) newitems.Add(BLL.{0}.dal.GetItem(dr));
 				}}, sql + TSQL.Returning, _parameters.ToArray());
 				BLL.{0}.RemoveCache(_dataSource.Union(newitems));
-				if (newitems == null) return 0;
 				foreach (var newitem in newitems) {{
 					if (_itemsDic.TryGetValue($""{{newitem.{14}}}"", out var olditem)) foreach (var a in _setAs.Values) a(olditem, newitem);
 					else {{
@@ -1519,12 +1518,11 @@ namespace {0}.DAL {{
 					await BLL.{0}.RemoveCacheAsync(_dataSource);
 					return affrows;
 				}}
-				List<{0}Info> newitems = null;
+				var newitems = new List<{0}Info>();
 				await PSqlHelper.ExecuteReaderAsync(async dr => {{
 					while (await dr.ReadAsync()) newitems.Add(await BLL.{0}.dal.GetItemAsync(dr));
 				}}, sql + TSQL.Returning, _parameters.ToArray());
 				await BLL.{0}.RemoveCacheAsync(_dataSource);
-				if (newitems == null) return 0;
 				foreach (var newitem in newitems) {{
 					if (_itemsDic.TryGetValue($""{{newitem.{14}}}"", out var olditem)) foreach (var a in _setAs.Values) a(olditem, newitem);
 					else {{
