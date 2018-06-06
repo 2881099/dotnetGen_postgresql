@@ -1075,7 +1075,7 @@ namespace {0}.Model {{
 						sb6.Insert(0, string.Format(@"
 		public {1}Info Save() {{{2}
 			if (this.{4} != null) {{
-				BLL.{1}.Update(this);
+				if (BLL.{1}.Update(this) == 0) return BLL.{1}.Insert(this);
 				return this;
 			}}{5}{3}
 			return BLL.{1}.Insert(this);
@@ -1085,7 +1085,7 @@ namespace {0}.Model {{
 						sb16.Insert(0, string.Format(@"
 		async public Task<{1}Info> SaveAsync() {{{2}
 			if (this.{4} != null) {{
-				await BLL.{1}.UpdateAsync(this);
+				if (await BLL.{1}.UpdateAsync(this) == 0) return await BLL.{1}.InsertAsync(this);
 				return this;
 			}}{5}{3}
 			return await BLL.{1}.InsertAsync(this);
@@ -1182,6 +1182,8 @@ namespace {0}.Model {{
 				string sqlDelete = string.Format("DELETE FROM {0} ", nTable_Name);
 				string sqlUpdate = string.Format("UPDATE {0} SET ", nTable_Name);
 				string sqlInsert = string.Format("INSERT INTO {0}(", nTable_Name);
+				string insertField = string.Empty;
+				string insertParms = string.Empty;
 				string temp1 = string.Empty;
 				string temp2 = string.Empty;
 				string temp3 = string.Empty;
@@ -1204,6 +1206,8 @@ namespace {0}.Model {{
 				sqlDelete += "WHERE ";
 				sqlUpdate += temp1 + string.Format(" WHERE {0}", pkSqlParam);
 				sqlInsert += string.Format("{0}) VALUES({1})", temp2, temp3);
+				insertField = temp2;
+				insertParms = temp3;
 
 				temp1 = "";
 				temp2 = "";
@@ -1237,8 +1241,11 @@ namespace {0}.DAL {{
 			internal static readonly string Field = @""{5}"";
 			internal static readonly string Sort = @""{6}"";
 			internal static readonly string Returning = @"" RETURNING "" + Field.Replace(@""a."""""", @"""""""");
-			public static readonly string Delete = @""DELETE FROM {3} WHERE "";
-			public static readonly string Insert = @""{2}{4}"" + Returning;
+			internal static readonly string Delete = @""DELETE FROM {3} WHERE "";
+			internal static readonly string InsertField = @""{2}"";
+			internal static readonly string InsertValues = @""{4}"";
+			internal static readonly string InsertMultiFormat = @""INSERT INTO {3}("" + InsertField + "") VALUES{{0}}"" + Returning;
+			internal static readonly string Insert = string.Format(InsertMultiFormat, $""({{InsertValues}})"");
 		}}
 		#endregion
 
@@ -1247,7 +1254,7 @@ namespace {0}.DAL {{
 			return new NpgsqlParameter[] {{
 {7}
 			}};
-		}}", solutionName, uClass_Name, string.Empty, nTable_Name, sqlInsert, sqlFields, orderBy, AppendParameters(table, "				"));
+		}}", solutionName, uClass_Name, insertField, nTable_Name, insertParms, sqlFields, orderBy, AppendParameters(table, "				"));
 
 				sb1.AppendFormat(@"
 		public {0}Info GetItem(NpgsqlDataReader dr) {{
@@ -1397,8 +1404,9 @@ namespace {0}.DAL {{
 			public SqlUpdateBuild Set{0}({2} value{4}) {{
 				if (_dataSource != null && _setAs.ContainsKey(""{0}"") == false) _setAs.Add(""{0}"", (olditem, newitem) => olditem.{0} = newitem.{0});
 				return this.Set({6}@""""""{1}""""{5}"", $""@{1}_{{_parameters.Count}}"", 
-					{3}value }});
-			}}", UFString(col.Name), col.Name, arrType, valueParm2.Replace("NpgsqlDbType.Array | ", ""), arrParm, arrUndeSql, string.IsNullOrEmpty(arrUndeSql) ? "" : "$");
+					{3}value{7} }});
+			}}", UFString(col.Name), col.Name, arrType, valueParm2.Replace("NpgsqlDbType.Array | ", ""), arrParm, arrUndeSql, string.IsNullOrEmpty(arrUndeSql) ? "" : "$", 
+				col.Type == NpgsqlDbType.Json || col.Type == NpgsqlDbType.Jsonb ? "?.ToString()" : "");
 						if (table.ForeignKeys.FindIndex(delegate (ForeignKeyInfo fkf) { return fkf.Columns.FindIndex(delegate (ColumnInfo fkfpkf) { return fkfpkf.Name == col.Name; }) != -1; }) == -1) {
 							string fptype = "";
 							if (col.Type == NpgsqlDbType.Smallint || col.Type == NpgsqlDbType.Integer || col.Type == NpgsqlDbType.Bigint ||
@@ -1434,11 +1442,37 @@ namespace {0}.DAL {{
 					}
 
 					string dal_insert_code = string.Format(@"
+		public {0}Info Insert({0}Info item) {{
 			{0}Info newitem = null;
 			PSqlHelper.ExecuteReader(dr => {{ newitem = GetItem(dr); }}, TSQL.Insert, GetParameters(item));
 			if (newitem == null) return null;
 			this.CopyItemAllField(item, newitem);
-			return item;", uClass_Name);
+			return item;
+		}}
+		public List<{0}Info> Insert(IEnumerable<{0}Info> items) {{
+			var mp = InsertMakeParam(items);
+			if (string.IsNullOrEmpty(mp.sql)) return new List<{0}Info>();
+			List<{0}Info> newitems = new List<{0}Info>();
+			PSqlHelper.ExecuteReader(dr => {{ newitems.Add(BLL.{0}.dal.GetItem(dr)); }}, mp.sql, mp.parms);
+			return newitems;
+		}}
+		public (string sql, NpgsqlParameter[] parms) InsertMakeParam(IEnumerable<{0}Info> items) {{
+			var itemsArr = items?.Where(a => a != null).ToArray();
+			if (itemsArr == null || itemsArr.Any() == false) return (null, null);
+			var values = """";
+			var parms = new NpgsqlParameter[itemsArr.Length * {1}];
+			for (var a = 0; a < itemsArr.Length; a++) {{
+				var item = itemsArr[a];
+				values += $"",({{TSQL.InsertValues.Replace("", "", a + "", "")}}{{a}})"";
+				var tmparms = GetParameters(item);
+				for (var b = 0; b < tmparms.Length; b++) {{
+					tmparms[b].ParameterName += a;
+					parms[a * {1} + b] = tmparms[b];
+				}}
+			}}
+			return (string.Format(TSQL.InsertMultiFormat, values.Substring(1)), parms);
+		}}", uClass_Name, insertParms.Split(new[] { ", " }, StringSplitOptions.None).Length);
+
 					dal_async_code += string.Format(@"
 		async public Task<{0}Info> InsertAsync({0}Info item) {{
 			{0}Info newitem = null;
@@ -1446,28 +1480,37 @@ namespace {0}.DAL {{
 			if (newitem == null) return null;
 			this.CopyItemAllField(item, newitem);
 			return item;
+		}}
+		async public Task<List<{0}Info>> InsertAsync(IEnumerable<{0}Info> items) {{
+			var mp = InsertMakeParam(items);
+			if (string.IsNullOrEmpty(mp.sql)) return new List<{0}Info>();
+			List<{0}Info> newitems = new List<{0}Info>();
+			await PSqlHelper.ExecuteReaderAsync(async dr => {{ newitems.Add(await BLL.{0}.dal.GetItemAsync(dr)); }}, mp.sql, mp.parms);
+			return newitems;
 		}}", uClass_Name);
 
 					string strdalpkwherein = "";
 					foreach (ColumnInfo dalpkcol001 in table.PrimaryKeys) strdalpkwherein += string.Format(@"
-						.Where(@""""""{0}"""" IN {{0}}"", _dataSource.Select(a => a.{1}))", dalpkcol001.Name, UFString(dalpkcol001.Name));
+						.Where(@""""""{0}"""" IN {{0}}"", _dataSource.Select(a => a.{1}).Distinct())", dalpkcol001.Name, UFString(dalpkcol001.Name));
 					if (!string.IsNullOrEmpty(strdalpkwherein)) strdalpkwherein = strdalpkwherein.Substring(strdalpkwherein.IndexOf("						") + 6);
 					sb1.AppendFormat(@"
 {1}
 
 		public SqlUpdateBuild Update({0}Info item) {{
-			return new SqlUpdateBuild(new List<{0}Info> {{ item }}){8};
+			return new SqlUpdateBuild(new List<{0}Info> {{ item }}, false){8};
 		}}
 		#region class SqlUpdateBuild
 		public partial class SqlUpdateBuild {{
 			protected List<{0}Info> _dataSource;
+			protected bool _isRefershDataSource;
 			protected Dictionary<string, {0}Info> _itemsDic;
 			protected string _fields;
 			protected string _where;
 			protected List<NpgsqlParameter> _parameters = new List<NpgsqlParameter>();
 			protected Dictionary<string, Action<{0}Info, {0}Info>> _setAs = new Dictionary<string, Action<{0}Info, {0}Info>>();
-			public SqlUpdateBuild(List<{0}Info> dataSource) {{
+			public SqlUpdateBuild(List<{0}Info> dataSource, bool isRefershDataSource) {{
 				_dataSource = dataSource;
+				_isRefershDataSource = isRefershDataSource;
 				_itemsDic = _dataSource == null ? null : _dataSource.ToDictionary(a => $""{{a.{12}}}"");
 				if (_dataSource != null && _dataSource.Any())
 					this{13};
@@ -1478,24 +1521,17 @@ namespace {0}.DAL {{
 				if (string.IsNullOrEmpty(_where)) throw new Exception(""防止 {9}.DAL.{0}.SqlUpdateBuild 误修改，请必须设置 where 条件。"");
 				return string.Concat(""UPDATE "", TSQL.Table, "" SET "", _fields.Substring(1), "" WHERE "", _where);
 			}}
-			/// <summary>
-			/// 执行update语句
-			/// </summary>
-			/// <param name=""isRefershDataSource"">是否更新dataSource（利用PostgreSQL数据库的returning特性）</param>
-			/// <returns></returns>
-			public int ExecuteNonQuery(bool isRefershDataSource = false) {{
+			public int ExecuteNonQuery() {{
 				string sql = this.ToString();
 				if (string.IsNullOrEmpty(sql)) return 0;
-				if (isRefershDataSource == false) {{
+				if (_dataSource == null || _dataSource.Any() == false || _isRefershDataSource == false) {{
 					var affrows = PSqlHelper.ExecuteNonQuery(sql, _parameters.ToArray());
 					BLL.{0}.RemoveCache(_dataSource);
 					return affrows;
 				}}
 				var newitems = new List<{0}Info>();
-				PSqlHelper.ExecuteReader(dr => {{
-					while (dr.Read()) newitems.Add(BLL.{0}.dal.GetItem(dr));
-				}}, sql + TSQL.Returning, _parameters.ToArray());
-				BLL.{0}.RemoveCache(_dataSource.Union(newitems));
+				PSqlHelper.ExecuteReader(dr => {{ newitems.Add(BLL.{0}.dal.GetItem(dr)); }}, sql + TSQL.Returning, _parameters.ToArray());
+				BLL.{0}.RemoveCache(_dataSource.Concat(newitems));
 				foreach (var newitem in newitems) {{
 					if (_itemsDic.TryGetValue($""{{newitem.{14}}}"", out var olditem)) foreach (var a in _setAs.Values) a(olditem, newitem);
 					else {{
@@ -1505,23 +1541,16 @@ namespace {0}.DAL {{
 				}}
 				return newitems.Count;
 			}}
-			/// <summary>
-			/// 执行update语句
-			/// </summary>
-			/// <param name=""isRefershDataSource"">是否更新dataSource（利用PostgreSQL数据库的returning特性）</param>
-			/// <returns></returns>
-			async public Task<int> ExecuteNonQueryAsync(bool isRefershDataSource = false) {{
+			async public Task<int> ExecuteNonQueryAsync() {{
 				string sql = this.ToString();
 				if (string.IsNullOrEmpty(sql)) return 0;
-				if (isRefershDataSource == false) {{
+				if (_dataSource == null || _dataSource.Any() == false || _isRefershDataSource == false) {{
 					var affrows = await PSqlHelper.ExecuteNonQueryAsync(sql, _parameters.ToArray());
 					await BLL.{0}.RemoveCacheAsync(_dataSource);
 					return affrows;
 				}}
 				var newitems = new List<{0}Info>();
-				await PSqlHelper.ExecuteReaderAsync(async dr => {{
-					while (await dr.ReadAsync()) newitems.Add(await BLL.{0}.dal.GetItemAsync(dr));
-				}}, sql + TSQL.Returning, _parameters.ToArray());
+				await PSqlHelper.ExecuteReaderAsync(async dr => {{ newitems.Add(await BLL.{0}.dal.GetItemAsync(dr)); }}, sql + TSQL.Returning, _parameters.ToArray());
 				await BLL.{0}.RemoveCacheAsync(_dataSource);
 				foreach (var newitem in newitems) {{
 					if (_itemsDic.TryGetValue($""{{newitem.{14}}}"", out var olditem)) foreach (var a in _setAs.Values) a(olditem, newitem);
@@ -1552,9 +1581,7 @@ namespace {0}.DAL {{
 			}}{6}
 		}}
 		#endregion
-
-		public {0}Info Insert({0}Info item) {{{10}
-		}}
+{10}
 {2}
 		#region async{11}
 		#endregion
@@ -1720,8 +1747,8 @@ namespace {0}.BLL {{
 					if (uniques_dic.Count > 1)
 						sb1.AppendFormat(@"
 		public static int Update({1}Info item) => dal.Update(item).ExecuteNonQuery();
-		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy({2}) => new {0}.DAL.{1}.SqlUpdateBuild(new List<{1}Info> {{ itemCacheTimeout > 0 ? new {1}Info {{ {4} }} : GetItem({3}) }});
-		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy(List<{1}Info> dataSource) => new {0}.DAL.{1}.SqlUpdateBuild(dataSource);
+		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy({2}) => new {0}.DAL.{1}.SqlUpdateBuild(new List<{1}Info> {{ itemCacheTimeout > 0 ? new {1}Info {{ {4} }} : GetItem({3}) }}, false);
+		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy(List<{1}Info> dataSource) => new {0}.DAL.{1}.SqlUpdateBuild(dataSource, true);
 		/// <summary>
 		/// 用于批量更新，不会更新缓存
 		/// </summary>
@@ -1734,8 +1761,8 @@ namespace {0}.BLL {{
 						}
 						sb1.AppendFormat(@"
 		public static int Update({1}Info item) => dal.Update(item).ExecuteNonQuery();
-		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy({2}) => new {0}.DAL.{1}.SqlUpdateBuild(new List<{1}Info> {{ new {1}Info {{ {4} }} }});
-		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy(List<{1}Info> dataSource) => new {0}.DAL.{1}.SqlUpdateBuild(dataSource);
+		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy({2}) => new {0}.DAL.{1}.SqlUpdateBuild(new List<{1}Info> {{ new {1}Info {{ {4} }} }}, false);
+		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy(List<{1}Info> dataSource) => new {0}.DAL.{1}.SqlUpdateBuild(dataSource, true);
 		/// <summary>
 		/// 用于批量更新，不会更新缓存
 		/// </summary>
@@ -1771,18 +1798,28 @@ namespace {0}.BLL {{
 
 					var redisRemove = sb4.ToString();
 					string cspk2GuidSetValue = "";
-					foreach (ColumnInfo cspk2 in table.PrimaryKeys)
-						if (cspk2.CsType == "Guid?") cspk2GuidSetValue += string.Format("\r\n			if (item.{0} == null) item.{0} = RedisHelper.NewMongodbId();", UFString(cspk2.Name));
+					string cspk2GuidSetValuesss = "";
+					foreach (ColumnInfo cspk2 in table.PrimaryKeys) {
+						if (cspk2.CsType == "Guid?") {
+							cspk2GuidSetValue += string.Format("\r\n			if (item.{0} == null) item.{0} = RedisHelper.NewMongodbId();", UFString(cspk2.Name));
+							cspk2GuidSetValuesss += string.Format("\r\n			foreach (var item in items) if (item != null && item.{0} == null) item.{0} = RedisHelper.NewMongodbId();", UFString(cspk2.Name));
+						}
+					}
 					sb1.AppendFormat(@"
 		public static {0}Info Insert({0}Info item) {{{3}
 			item = dal.Insert(item);
 			if (itemCacheTimeout > 0) RemoveCache(item);
 			return item;
 		}}
+		public static List<{0}Info> Insert(IEnumerable<{0}Info> items) {{{4}
+			var newitems = dal.Insert(items);
+			if (itemCacheTimeout > 0) RemoveCache(newitems);
+			return newitems;
+		}}
 		internal static void RemoveCache({0}Info item) => RemoveCache(item == null ? null : new [] {{ item }});
 		internal static void RemoveCache(IEnumerable<{0}Info> items) {{
 			if (itemCacheTimeout <= 0 || items == null || items.Any() == false) return;
-			var keys = new string[items.Count()];
+			var keys = new string[items.Count() * {5}];
 			var keysIdx = 0;
 			foreach (var item in items) {{{2}
 			}}
@@ -1790,23 +1827,28 @@ namespace {0}.BLL {{
 		}}
 		#endregion
 {1}
-", uClass_Name, sb3.ToString(), redisRemove, cspk2GuidSetValue);
+", uClass_Name, sb3.ToString(), redisRemove, cspk2GuidSetValue, cspk2GuidSetValuesss, table.Uniques.Count);
 					bll_async_code += string.Format(@"
 		async public static Task<{0}Info> InsertAsync({0}Info item) {{{3}
 			item = await dal.InsertAsync(item);
 			if (itemCacheTimeout > 0) await RemoveCacheAsync(item);
 			return item;
 		}}
+		async public static Task<List<{0}Info>> InsertAsync(IEnumerable<{0}Info> items) {{{4}
+			var newitems = await dal.InsertAsync(items);
+			if (itemCacheTimeout > 0) await RemoveCacheAsync(newitems);
+			return newitems;
+		}}
 		async internal static Task RemoveCacheAsync({0}Info item) => await RemoveCacheAsync(item == null ? null : new [] {{ item }});
 		async internal static Task RemoveCacheAsync(IEnumerable<{0}Info> items) {{
 			if (itemCacheTimeout <= 0 || items == null || items.Any() == false) return;
-			var keys = new string[items.Count()];
+			var keys = new string[items.Count() * {5}];
 			var keysIdx = 0;
 			foreach (var item in items) {{{2}
 			}}
 			await RedisHelper.RemoveAsync(keys.Distinct().ToArray());
 		}}
-", uClass_Name, "", redisRemove.Replace("RedisHelper.Remove", "await RedisHelper.RemoveAsync"), cspk2GuidSetValue);
+", uClass_Name, "", redisRemove.Replace("RedisHelper.Remove", "await RedisHelper.RemoveAsync"), cspk2GuidSetValue, cspk2GuidSetValuesss, table.Uniques.Count);
 					#endregion
 				}
 

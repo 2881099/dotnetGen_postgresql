@@ -573,9 +573,9 @@ namespace Server {
 				case NpgsqlDbType.Inet:
 				case NpgsqlDbType.MacAddr:
 
+				case NpgsqlDbType.Uuid: type += " | NpgsqlDbType." + col.Type.ToString(); break;
 				case NpgsqlDbType.Json:
-				case NpgsqlDbType.Jsonb:
-				case NpgsqlDbType.Uuid: type += " | NpgsqlDbType." + col.Type.ToString();break;
+				case NpgsqlDbType.Jsonb: type += " | NpgsqlDbType." + col.Type.ToString(); type2 = "?.ToString()"; break;
 
 				case NpgsqlDbType.IntegerRange: type += " | NpgsqlDbType.Range | NpgsqlDbType.Integer"; break;
 				case NpgsqlDbType.BigintRange: type += " | NpgsqlDbType.Range | NpgsqlDbType.Bigint"; break;
@@ -596,7 +596,7 @@ namespace Server {
 				case NpgsqlDbType.Geometry:
 				default: type += " | NpgsqlDbType." + col.Type.ToString(); break;
 			}
-			string returnValue = place + string.Format("new NpgsqlParameter(\"{0}\", {1}, {2}) {{ Value = {3} }}, \r\n",
+			string returnValue = place + string.Format("new NpgsqlParameter(\"{0}\", {1}, {2}) {{ Value = {3}{4} }}, \r\n",
 				col.Name, type.Substring(3), col.Length, value + UFString(col.Name), type2);
 
 			return returnValue;

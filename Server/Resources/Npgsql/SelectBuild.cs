@@ -174,7 +174,8 @@ namespace Npgsql {
 			_exec.ExecuteReader(dr => {
 				int dataIndex = -1;
 				if (!string.IsNullOrEmpty(_distinctOnFields)) ++dataIndex;
-				ret.Add((T)this.AggregateReadTuple(type, dr, ref dataIndex));
+				var read = this.AggregateReadTuple(type, dr, ref dataIndex);
+				ret.Add(read == null ? default(T) : (T)read);
 			}, CommandType.Text, sql, _params.ToArray());
 			return ret;
 		}
