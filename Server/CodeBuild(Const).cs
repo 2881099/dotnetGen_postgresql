@@ -385,6 +385,7 @@ public static partial class {0}BLLExtensionMethods {{
 using System.Text;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Newtonsoft.Json;
 using NpgsqlTypes;
@@ -400,7 +401,6 @@ public static partial class {0}ExtensionMethods {{
 		return 2 * Math.Asin(Math.Sqrt(Math.Pow(Math.Sin((radLat1 - radLat2) / 2), 2) + Math.Cos(radLat1) * Math.Cos(radLat2) * Math.Pow(Math.Sin((radLng1 - radLng2) / 2), 2))) * 6378137;
 	}}
 {1}
-	public static string GetJson(IEnumerable items) => JsonConvert.SerializeObject(GetBson(items));
 	public static IDictionary[] GetBson(IEnumerable items, Delegate func = null) {{
 		List<IDictionary> ret = new List<IDictionary>();
 		IEnumerator ie = items.GetEnumerator();
@@ -1532,6 +1532,8 @@ namespace {0}.Module.Admin.Controllers {{
 			return new {{
 				FreeConnections = PSqlHelper.Instance.Pool.FreeConnections.Count,
 				AllConnections = PSqlHelper.Instance.Pool.AllConnections.Count,
+				GetConnectionQueue = PSqlHelper.Instance.Pool.GetConnectionQueue.Count,
+				GetConnectionAsyncQueue = PSqlHelper.Instance.Pool.GetConnectionAsyncQueue.Count,
 				List = ret
 			}};
 		}}
@@ -1547,6 +1549,8 @@ namespace {0}.Module.Admin.Controllers {{
 			return new {{
 				FreeConnections = RedisHelper.Instance.FreeConnections.Count,
 				AllConnections = RedisHelper.Instance.AllConnections.Count,
+				GetConnectionQueue = RedisHelper.Instance.GetConnectionQueue.Count,
+				GetConnectionAsyncQueue = RedisHelper.Instance.GetConnectionAsyncQueue.Count,
 				List = ret
 			}};
 		}}

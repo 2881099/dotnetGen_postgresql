@@ -952,13 +952,13 @@ namespace {0}.Model {{
 						sb6.AppendFormat(@"
 		public {0}Info Add{1}({2}) => Add{1}(new {0}Info {{{3}}});
 		public {0}Info Add{1}({0}Info item) {{{5}
-			return item.Save();
+			return BLL.{0}.Insert(item);
 		}}
 ", UFString(t2.ClassName), UFString(addname_schema), parms2_add, parmsNoneType2_add, solutionName, parmsNoneType5);
 						sb16.AppendFormat(@"
 		async public Task<{0}Info> Add{1}Async({2}) => await Add{1}Async(new {0}Info {{{3}}});
 		async public Task<{0}Info> Add{1}Async({0}Info item) {{{5}
-			return await item.SaveAsync();
+			return await BLL.{0}.InsertAsync(item);
 		}}
 ", UFString(t2.ClassName), UFString(addname_schema), parms2_add, parmsNoneType2_add, solutionName, parmsNoneType5);
 					}
@@ -1166,9 +1166,9 @@ namespace {0}.Model {{
 				clearSb();
 
 				Model_Build__ExtensionMethods_cs.AppendFormat(@"
-	public static string ToJson(this {0}Info item) => GetJson(new [] {{ item }});
-	public static string ToJson(this {0}Info[] items) => GetJson(items);
-	public static string ToJson(this IEnumerable<{0}Info> items) => GetJson(items);
+	public static string ToJson(this {0}Info item) => JsonConvert.SerializeObject(GetBson(new [] {{ item }}).First());
+	public static string ToJson(this {0}Info[] items) => JsonConvert.SerializeObject(GetBson(items));
+	public static string ToJson(this IEnumerable<{0}Info> items) => JsonConvert.SerializeObject(GetBson(items));
 	public static IDictionary[] ToBson(this {0}Info[] items, Func<{0}Info, object> func = null) => GetBson(items, func);
 	public static IDictionary[] ToBson(this IEnumerable<{0}Info> items, Func<{0}Info, object> func = null) => GetBson(items, func);
 	public static {1}.DAL.{0}.SqlUpdateBuild UpdateDiy(this List<{0}Info> items) => {1}.BLL.{0}.UpdateDiy(items);
@@ -1419,7 +1419,7 @@ namespace {0}.DAL {{
 			public SqlUpdateBuild Set{0}Flag(int _0_16{4}, bool isUnFlag = false) {{
 				if (_dataSource != null && _setAs.ContainsKey(""{0}"") == false) _setAs.Add(""{0}"", (olditem, newitem) => olditem.{0} = newitem.{0});
 				{2} tmp1 = ({2})Math.Pow(2, _0_16);
-				return this.Set({7}@""""""{1}""""{5}"", $@""nullif(""""{1}""""{6},0) {{(isUnFlag ? '^' : '|')}} @{1}_{{_parameters.Count}}"", 
+				return this.Set({7}@""""""{1}""""{5}"", $@""COALESCE(""""{1}""""{6},0) {{(isUnFlag ? '^' : '|')}} @{1}_{{_parameters.Count}}"", 
 					{3}tmp1 }});
 			}}
 			public SqlUpdateBuild Set{0}UnFlag(int _0_16{4}) {{
@@ -1799,10 +1799,15 @@ namespace {0}.BLL {{
 					var redisRemove = sb4.ToString();
 					string cspk2GuidSetValue = "";
 					string cspk2GuidSetValuesss = "";
-					foreach (ColumnInfo cspk2 in table.PrimaryKeys) {
-						if (cspk2.CsType == "Guid?") {
+					foreach (ColumnInfo cspk2 in table.Columns) {
+						if (cspk2.CsType == "Guid?" && cspk2.IsPrimaryKey) {
 							cspk2GuidSetValue += string.Format("\r\n			if (item.{0} == null) item.{0} = RedisHelper.NewMongodbId();", UFString(cspk2.Name));
 							cspk2GuidSetValuesss += string.Format("\r\n			foreach (var item in items) if (item != null && item.{0} == null) item.{0} = RedisHelper.NewMongodbId();", UFString(cspk2.Name));
+						}
+						if (cspk2.CsType == "DateTime?" && cspk2.Name == "create_time" ||
+							cspk2.CsType == "DateTime?" && cspk2.Name == "update_time") {
+							cspk2GuidSetValue += string.Format("\r\n			if (item.{0} == null) item.{0} = DateTime.Now;", UFString(cspk2.Name));
+							cspk2GuidSetValuesss += string.Format("\r\n			foreach (var item in items) if (item != null && item.{0} == null) item.{0} = DateTime.Now;", UFString(cspk2.Name));
 						}
 					}
 					sb1.AppendFormat(@"
