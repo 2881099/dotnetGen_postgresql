@@ -974,16 +974,16 @@ namespace {0}.Model {{
 								break;
 							}
 						sb6.AppendFormat(@"
-		public int Unflag{1}({2}) => Unflag{1}({3});
-		public int Unflag{1}({4}) => BLL.{0}.Delete{9}({5});
-		public int Unflag{1}ALL() => BLL.{0}.DeleteBy{8}(this.{7});
+		public {0}Info Unflag{1}({2}) => Unflag{1}({3});
+		public {0}Info Unflag{1}({4}) => BLL.{0}.Delete{9}({5});
+		public List<{0}Info> Unflag{1}ALL() => BLL.{0}.DeleteBy{8}(this.{7});
 ", UFString(t2.ClassName), UFString(addname_schema), parms3, parmsNoneType3, parms4, parmsNoneType4,
 	solutionName, string.Format(GetCSTypeValue(table.PrimaryKeys[0].Type), UFString(table.PrimaryKeys[0].Name)),
 							UFString(fk.Columns[0].Name), deleteByUniqui);
 						sb16.AppendFormat(@"
-		async public Task<int> Unflag{1}Async({2}) => await Unflag{1}Async({3});
-		async public Task<int> Unflag{1}Async({4}) => await BLL.{0}.Delete{9}Async({5});
-		async public Task<int> Unflag{1}ALLAsync() => await BLL.{0}.DeleteBy{8}Async(this.{7});
+		async public Task<{0}Info> Unflag{1}Async({2}) => await Unflag{1}Async({3});
+		async public Task<{0}Info> Unflag{1}Async({4}) => await BLL.{0}.Delete{9}Async({5});
+		async public Task<List<{0}Info>> Unflag{1}ALLAsync() => await BLL.{0}.DeleteBy{8}Async(this.{7});
 ", UFString(t2.ClassName), UFString(addname_schema), parms3, parmsNoneType3, parms4, parmsNoneType4,
 	solutionName, string.Format(GetCSTypeValue(table.PrimaryKeys[0].Type), UFString(table.PrimaryKeys[0].Name)),
 							UFString(fk.Columns[0].Name), deleteByUniqui);
@@ -1322,15 +1322,19 @@ namespace {0}.DAL {{
 					if (del_exists.ContainsKey(parms)) continue;
 					del_exists.Add(parms, true);
 					sb2.AppendFormat(@"
-		public int Delete{2}({0}) {{
-			return PSqlHelper.ExecuteNonQuery(string.Concat(TSQL.Delete, @""{1}""), 
-{3});
-		}}", parms, sqlParms, cs[0].IsPrimaryKey ? string.Empty : parmsBy, AppendParameters(cs, "				"));
+		public {0}Info Delete{3}({1}) {{
+			{0}Info item = null;
+			PSqlHelper.ExecuteReader(dr => {{ item = BLL.{0}.dal.GetItem(dr); }}, string.Concat(TSQL.Delete, @""{2}"", TSQL.Returning),
+{4});
+			return item;
+		}}", uClass_Name, parms, sqlParms, cs[0].IsPrimaryKey ? string.Empty : parmsBy, AppendParameters(cs, "				"));
 					dal_async_code += string.Format(@"
-		public Task<int> Delete{2}Async({0}) {{
-			return PSqlHelper.ExecuteNonQueryAsync(string.Concat(TSQL.Delete, @""{1}""), 
-{3});
-		}}", parms, sqlParms, cs[0].IsPrimaryKey ? string.Empty : parmsBy, AppendParameters(cs, "				"));
+		async public Task<{0}Info> Delete{3}Async({1}) {{
+			{0}Info item = null;
+			await PSqlHelper.ExecuteReaderAsync(async dr => {{ item = await BLL.{0}.dal.GetItemAsync(dr); }}, string.Concat(TSQL.Delete, @""{2}"", TSQL.Returning),
+{4});
+			return item;
+		}}", uClass_Name, parms, sqlParms, cs[0].IsPrimaryKey ? string.Empty : parmsBy, AppendParameters(cs, "				"));
 				}
 				table.ForeignKeys.ForEach(delegate (ForeignKeyInfo fkk) {
 					string parms = string.Empty;
@@ -1348,15 +1352,19 @@ namespace {0}.DAL {{
 					del_exists.Add(parms, true);
 
 					sb2.AppendFormat(@"
-		public int Delete{2}({0}) {{
-			return PSqlHelper.ExecuteNonQuery(string.Concat(TSQL.Delete, @""{1}""), 
-{3});
-		}}", parms, sqlParms, parmsBy, AppendParameters(fkk.Columns, "				"));
+		public List<{0}Info> Delete{3}({1}) {{
+			var items = new List<{0}Info>();
+			PSqlHelper.ExecuteReader(dr => {{ items.Add(BLL.{0}.dal.GetItem(dr)); }}, string.Concat(TSQL.Delete, @""{2}"", TSQL.Returning),
+{4});
+			return items;
+		}}", uClass_Name, parms, sqlParms, parmsBy, AppendParameters(fkk.Columns, "				"));
 					dal_async_code += string.Format(@"
-		public Task<int> Delete{2}Async({0}) {{
-			return PSqlHelper.ExecuteNonQueryAsync(string.Concat(TSQL.Delete, @""{1}""), 
-{3});
-		}}", parms, sqlParms, parmsBy, AppendParameters(fkk.Columns, "				"));
+		async public Task<List<{0}Info>> Delete{3}Async({1}) {{
+			var items = new List<{0}Info>();
+			await PSqlHelper.ExecuteReaderAsync(async dr => {{ items.Add(await BLL.{0}.dal.GetItemAsync(dr)); }}, string.Concat(TSQL.Delete, @""{2}"", TSQL.Returning),
+{4});
+			return items;
+		}}", uClass_Name, parms, sqlParms, parmsBy, AppendParameters(fkk.Columns, "				"));
 				});
 
 				if (table.PrimaryKeys.Count > 0) {
@@ -1673,6 +1681,13 @@ namespace {0}.BLL {{
 					if (del_exists2.ContainsKey(parms)) continue;
 					del_exists2.Add(parms, true);
 
+					sb2.AppendFormat(@"
+		public static {0}Info Delete{3}({1}) {{
+			var item = dal.Delete{3}({2});
+			if (itemCacheTimeout > 0) RemoveCache(item);
+			return item;
+		}}", uClass_Name, parms, parmsNoneType, cs[0].IsPrimaryKey ? string.Empty : parmsBy);
+					/*
 					if (uniques_dic.Count > 1)
 						sb2.AppendFormat(@"
 		public static int Delete{2}({0}) {{
@@ -1687,7 +1702,14 @@ namespace {0}.BLL {{
 			if (itemCacheTimeout > 0) RemoveCache(new {3}Info {{ {4} }});
 			return affrows;
 		}}", parms, parmsNoneType, cs[0].IsPrimaryKey ? string.Empty : parmsBy, uClass_Name, parmsNewItem);
-
+					*/
+					bll_async_code += string.Format(@"
+		async public static Task<{0}Info> Delete{3}Async({1}) {{
+			var item = await dal.Delete{3}Async({2});
+			if (itemCacheTimeout > 0) await RemoveCacheAsync(item);
+			return item;
+		}}", uClass_Name, parms, parmsNoneType, cs[0].IsPrimaryKey ? string.Empty : parmsBy);
+					/*
 					if (uniques_dic.Count > 1)
 						bll_async_code += string.Format(@"
 		async public static Task<int> Delete{2}Async({0}) {{
@@ -1702,7 +1724,7 @@ namespace {0}.BLL {{
 			if (itemCacheTimeout > 0) await RemoveCacheAsync(new {3}Info {{ {4} }});
 			return affrows;
 		}}", parms, parmsNoneType, cs[0].IsPrimaryKey ? string.Empty : parmsBy, uClass_Name, parmsNewItem);
-
+					*/
 
 					sb3.AppendFormat(@"
 		public static {1}Info GetItem{2}({4}) {{
@@ -1750,9 +1772,6 @@ namespace {0}.BLL {{
 		public static int Update({1}Info item) => dal.Update(item).ExecuteNonQuery();
 		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy({2}) => new {0}.DAL.{1}.SqlUpdateBuild(new List<{1}Info> {{ itemCacheTimeout > 0 ? new {1}Info {{ {4} }} : GetItem({3}) }}, false);
 		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy(List<{1}Info> dataSource) => new {0}.DAL.{1}.SqlUpdateBuild(dataSource, true);
-		/// <summary>
-		/// 用于批量更新，不会更新缓存
-		/// </summary>
 		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiyDangerous => new {0}.DAL.{1}.SqlUpdateBuild();
 ", solutionName, uClass_Name, pkCsParam.Replace("?", ""), pkCsParamNoType, pkCsParamNoTypeFieldInit);
 					else {
@@ -1764,9 +1783,6 @@ namespace {0}.BLL {{
 		public static int Update({1}Info item) => dal.Update(item).ExecuteNonQuery();
 		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy({2}) => new {0}.DAL.{1}.SqlUpdateBuild(new List<{1}Info> {{ new {1}Info {{ {4} }} }}, false);
 		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiy(List<{1}Info> dataSource) => new {0}.DAL.{1}.SqlUpdateBuild(dataSource, true);
-		/// <summary>
-		/// 用于批量更新，不会更新缓存
-		/// </summary>
 		public static {0}.DAL.{1}.SqlUpdateBuild UpdateDiyDangerous => new {0}.DAL.{1}.SqlUpdateBuild();
 ", solutionName, uClass_Name, pkCsParam.Replace("?", ""), pkCsParamNoType, xxxxtempskdf.Substring(0, xxxxtempskdf.Length - 2));
 					}
@@ -1829,7 +1845,8 @@ namespace {0}.BLL {{
 			var keysIdx = 0;
 			foreach (var item in items) {{{2}
 			}}
-			RedisHelper.Remove(keys.Distinct().ToArray());
+			if (PSqlHelper.Instance.CurrentThreadTransaction != null) PSqlHelper.Instance.PreRemove(keys.Distinct().ToArray());
+			else RedisHelper.Remove(keys.Distinct().ToArray());
 		}}
 		#endregion
 {1}
@@ -1887,13 +1904,17 @@ namespace {0}.BLL {{
 
 					if (!del_exists2.ContainsKey(fkcsTypeParms)) {
 						sb5.AppendFormat(@"
-		public static int DeleteBy{2}({0}) {{
-			return dal.DeleteBy{2}({1});
-		}}", fkcsTypeParms, fkcsParms, fkcsBy);
+		public static List<{0}Info> DeleteBy{3}({1}) {{
+			var items = dal.DeleteBy{3}({2});
+			if (itemCacheTimeout > 0) RemoveCache(items);
+			return items;
+		}}", uClass_Name, fkcsTypeParms, fkcsParms, fkcsBy);
 						bll_async_code = string.Format(@"
-		public static Task<int> DeleteBy{2}Async({0}) {{
-			return dal.DeleteBy{2}Async({1});
-		}}", fkcsTypeParms, fkcsParms, fkcsBy) + bll_async_code;
+		async public static Task<List<{0}Info>> DeleteBy{3}Async({1}) {{
+			var items = await dal.DeleteBy{3}Async({2});
+			if (itemCacheTimeout > 0) await RemoveCacheAsync(items);
+			return items;
+		}}", uClass_Name, fkcsTypeParms, fkcsParms, fkcsBy) + bll_async_code;
 						del_exists2.Add(fkcsTypeParms, true);
 					}
 					if (fk.Columns.Count > 1) {
@@ -2323,7 +2344,7 @@ namespace {0}.BLL {{
 				.LeftJoin<{0}>(""{3}"", ""{3}.{1} = a.{2}"")", UFString(fks[0].ReferencedTable.ClassName), fks[0].ReferencedColumns[0].Name, fks[0].Columns[0].Name, (char)++str_controller_list_join_alias);
 							if (str_listCms2FilterFK_fkitems.Contains("	var fk_" + LFString(fks[0].ReferencedTable.ClassName) + "s = ") == false)
 								str_listCms2FilterFK_fkitems += string.Format(@"
-	var fk_{1}s = {0}.Select.ToList();", UFString(fks[0].ReferencedTable.ClassName), LFString(fks[0].ReferencedTable.ClassName));
+	var fk_{1}s = {2}{0}.Select.ToList();", UFString(fks[0].ReferencedTable.ClassName), LFString(fks[0].ReferencedTable.ClassName), UFString(fks[0].ReferencedTable.ClassName) == "User" ? solutionName + ".BLL." : "");
 							str_listCms2FilterFK += string.Format(@"
 			{{ name: '{0}', field: '{4}', text: @Html.Json(fk_{1}s.Select(a => a.{2})), value: @Html.Json(fk_{1}s.Select(a => a.{3})) }},",
 				UFString(fks[0].ReferencedTable.ClassName), LFString(fks[0].ReferencedTable.ClassName),
@@ -2467,7 +2488,7 @@ namespace {0}.BLL {{
 			if ({0}_{1}.Length > 0) select.Where{0}_{1}({0}_{1});", UFString(addname), table.PrimaryKeys[0].Name);
 						if (str_listCms2FilterFK_fkitems.Contains("	var fk_" + LFString(fk2[0].ReferencedTable.ClassName) + "s = ") == false)
 							str_listCms2FilterFK_fkitems += string.Format(@"
-	var fk_{1}s = {0}.Select.ToList();", UFString(fk2[0].ReferencedTable.ClassName), LFString(fk2[0].ReferencedTable.ClassName));
+	var fk_{1}s = {2}{0}.Select.ToList();", UFString(fk2[0].ReferencedTable.ClassName), LFString(fk2[0].ReferencedTable.ClassName), UFString(fk2[0].ReferencedTable.ClassName) == "User" ? solutionName + ".BLL." : "");
 						str_listCms2FilterFK += string.Format(@"
 			{{ name: '{0}', field: '{4}', text: @Html.Json(fk_{1}s.Select(a => a.{2})), value: @Html.Json(fk_{1}s.Select(a => a.{3})) }},",
 			UFString(fk2[0].ReferencedTable.ClassName), LFString(fk2[0].ReferencedTable.ClassName),
@@ -2504,7 +2525,7 @@ namespace {0}.BLL {{
 							UFString(addname), LFString(addname), UFString(fk2[0].ReferencedColumns[0].Name), strName);
 						if (str_fk_getlist.Contains("	var fk_" + LFString(fk2[0].ReferencedTable.ClassName) + "s") == false)
 							str_fk_getlist += string.Format(@"
-	var fk_{1}s = {0}.Select.ToList();", UFString(fk2[0].ReferencedTable.ClassName), LFString(fk2[0].ReferencedTable.ClassName));
+	var fk_{1}s = {2}{0}.Select.ToList();", UFString(fk2[0].ReferencedTable.ClassName), LFString(fk2[0].ReferencedTable.ClassName), UFString(fk2[0].ReferencedTable.ClassName) == "User" ? solutionName + ".BLL." : "");
 						str_addjs_mn_initUI += string.Format(@"
 			item.mn_{0} = @Html.Json(item.Obj_{2}s);
 			for (var a = 0; a < item.mn_{0}.length; a++) $(form.mn_{0}).find('option[value=""{{0}}""]'.format(item.mn_{0}[a].{1})).attr('selected', 'selected');", UFString(addname), UFString(fk2[0].ReferencedColumns[0].Name), LFString(addname));
@@ -2512,12 +2533,12 @@ namespace {0}.BLL {{
 
 					string str_mvcdel = string.Format(@"
 		async public Task<APIReturn> _Del([FromForm] {2}[] ids) {{
-			int affrows = 0;
+			var dels = new List<object>();
 			foreach ({2} id in ids)
-				affrows += await {1}.DeleteAsync(id);
-			if (affrows > 0) return APIReturn.成功.SetMessage($""删除成功，影响行数：{{affrows}}"");
+				dels.Add(await {3}{1}.DeleteAsync(id));
+			if (dels.Count > 0) return APIReturn.成功.SetMessage($""删除成功，影响行数：{{dels.Count}}"").SetData(""dels"", dels);
 			return APIReturn.失败;
-		}}", solutionName, uClass_Name, table.PrimaryKeys[0].CsType.Replace("?", ""));
+		}}", solutionName, uClass_Name, table.PrimaryKeys[0].CsType.Replace("?", ""), uClass_Name == "User" ? "BLL." : "");
 					if (table.PrimaryKeys.Count > 1) {
 						string pkParses = "";
 						int pk_idx = 0;
@@ -2527,21 +2548,21 @@ namespace {0}.BLL {{
 						pkParses = pkParses.Substring(2);
 						str_mvcdel = string.Format(@"
 		async public Task<APIReturn> _Del([FromForm] string[] ids) {{
-			int affrows = 0;
+			var dels = new List<object>();
 			foreach (string id in ids) {{
 				string[] vs = id.Split(',');
-				affrows += await {1}.DeleteAsync({2});
+				dels.Add(await {3}{1}.DeleteAsync({2}));
 			}}
-			if (affrows > 0) return APIReturn.成功.SetMessage($""删除成功，影响行数：{{affrows}}"");
+			if (dels.Count > 0) return APIReturn.成功.SetMessage($""删除成功，影响行数：{{dels.Count}}"").SetData(""dels"", dels);
 			return APIReturn.失败;
-		}}", solutionName, uClass_Name, pkParses);
+		}}", solutionName, uClass_Name, pkParses, uClass_Name == "User" ? "BLL." : "");
 					}
 
 					sb1.AppendFormat(CONST.Module_Admin_Controller, solutionName, uClass_Name, nClass_Name, pkMvcRoute,
 						"[FromQuery] " + pkCsParam.Replace("?", "").Replace(", ", ", [FromQuery] "), pkCsParamNoType, itemSetValuePK, itemSetValueNotPK,
 						sb2.ToString(), sb3.ToString(), itemCsParamInsertForm, itemCsParamUpdateForm, getListParamQuery, itemSetValuePKInsert,
 						str_controller_list_join, "",
-						str_controller_insert_mn, str_controller_update_mn, str_mvcdel);
+						str_controller_insert_mn, str_controller_update_mn, str_mvcdel, uClass_Name == "User" ? "BLL." : "");
 
 					loc1.Add(new BuildInfo(string.Concat(CONST.moduleAdminPath, @"\Controllers\", uClass_Name, @"Controller.cs"), Deflate.Compress(sb1.ToString())));
 					clearSb();
@@ -2796,7 +2817,7 @@ namespace {0}.BLL {{
 							}
 							if (str_fk_getlist.Contains("	var fk_" + FK_uClass_Name + "s") == false)
 								str_fk_getlist += string.Format(@"
-	var fk_{0}s = {0}.Select.ToList();", FK_uClass_Name);
+	var fk_{0}s = {1}{0}.Select.ToList();", FK_uClass_Name, FK_uClass_Name == "User" ? solutionName +  ".BLL." : "");
 						} else if ((col.Type == NpgsqlDbType.Integer || col.Type == NpgsqlDbType.Bigint) && (lname == "status" || lname.StartsWith("status_") || lname.EndsWith("_status"))) {
 							//加载 multi 多状态字段
 							sb4.AppendFormat(@"
