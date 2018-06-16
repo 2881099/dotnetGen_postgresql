@@ -2040,83 +2040,112 @@ namespace {0}.BLL {{
 						csType = GetCSType(col.Type, 0, col.SqlType);
 						if (col.Type == NpgsqlDbType.Enum) {
 							sb6.AppendFormat(@"
-		public {0}SelectBuild Where{1}Any_IN(params {3}[] {1}s) {{
-			return this.Where1Or(@""a.""""{4}"""" @> ARRAY[{{0}}::{5}]"", {1}s);
-		}}
-		public {0}SelectBuild Where{1}Any({2} {1}1) {{
-			return this.Where{1}Any_IN({1}1);
-		}}
-		#region Where{1}
-		public {0}SelectBuild Where{1}Any({2} {1}1, {2} {1}2) {{
-			return this.Where{1}Any_IN({1}1, {1}2);
-		}}
-		public {0}SelectBuild Where{1}Any({2} {1}1, {2} {1}2, {2} {1}3) {{
-			return this.Where{1}Any_IN({1}1, {1}2, {1}3);
-		}}
-		public {0}SelectBuild Where{1}Any({2} {1}1, {2} {1}2, {2} {1}3, {2} {1}4) {{
-			return this.Where{1}Any_IN({1}1, {1}2, {1}3, {1}4);
-		}}
-		public {0}SelectBuild Where{1}Any({2} {1}1, {2} {1}2, {2} {1}3, {2} {1}4, {2} {1}5) {{
-			return this.Where{1}Any_IN({1}1, {1}2, {1}3, {1}4, {1}5);
-		}}
-		#endregion", uClass_Name, fkcsBy, csType.Replace("?", ""), csType, col.Name, col.SqlType);
+		public {0}SelectBuild Where{1}Any_IN(params {3}[] {1}s) => this.Where1Or(@""a.""""{4}"""" @> ARRAY[{{0}}::{5}]"", {1}s);
+		public {0}SelectBuild Where{1}Any({2} {1}1) => this.Where{1}Any_IN({1}1);
+		public {0}SelectBuild Where{1}Any({2} {1}1, {2} {1}2) => this.Where{1}Any_IN({1}1, {1}2);
+		public {0}SelectBuild Where{1}Any({2} {1}1, {2} {1}2, {2} {1}3) => this.Where{1}Any_IN({1}1, {1}2, {1}3);
+		public {0}SelectBuild Where{1}Any({2} {1}1, {2} {1}2, {2} {1}3, {2} {1}4) => this.Where{1}Any_IN({1}1, {1}2, {1}3, {1}4);
+		public {0}SelectBuild Where{1}Any({2} {1}1, {2} {1}2, {2} {1}3, {2} {1}4, {2} {1}5) => this.Where{1}Any_IN({1}1, {1}2, {1}3, {1}4, {1}5);", uClass_Name, fkcsBy, csType.Replace("?", ""), csType, col.Name, col.SqlType);
 							return;
 						}
 						sb6.AppendFormat(@"
-		public {0}SelectBuild Where{1}Any(params {2}[] {1}) {{
-			if ({1} == null) return this.Where(@""a.""""{3}"""" IS NULL"");
-			return this.Where1Or(@""a.""""{3}"""" @> array[{{0}}::{4}]"", {1});
-		}}", uClass_Name, fkcsBy, csType.Replace("?", ""), col.Name, col.SqlType);
+		public {0}SelectBuild Where{1}Any(params {2}[] {1}) => {1} == null ? this.Where(@""a.""""{3}"""" IS NULL"") : this.Where1Or(@""a.""""{3}"""" @> ARRAY[{{0}}::{4}]"", {1});", uClass_Name, fkcsBy, csType.Replace("?", ""), col.Name, col.SqlType);
 						return;
 					}
 					
 					if (col.Type == NpgsqlDbType.Jsonb) {
 						sb6.AppendFormat(@"
-		public {0}SelectBuild Where{1}Contain(params JToken[] {1}) {{
+		/// <summary>
+		/// {3}顶层是否包含JSON路径/值项，如：'{{""a"":1, ""b"":2}}'::jsonb @&gt; '{{""b"":2}}'::jsonb
+		/// </summary>
+		/// <param name=""{1}"">查找的json</param>
+		/// <returns></returns>
+		public {0}SelectBuild Where{1}Contain(params JToken[] {1}) => {1} == null ? this.Where(@""a.""""{3}"""" IS NULL"") : this.Where1Or(@""a.""""{3}"""" @> {{0}}::jsonb"", {1}?.Select(a => a?.ToString()).Where(a => !string.IsNullOrEmpty(a)).ToArray());
+		/// <summary>
+		/// {3}顶层键值是否包含，如：'{{""a"":1, ""b"":2}}'::jsonb ? 'b'
+		/// </summary>
+		/// <param name=""key"">查找的key</param>
+		/// <returns></returns>
+		public {0}SelectBuild Where{1}ContainKey(params string[] key) => this.Where1Or(@""a.""""{3}"""" ? {{0}}"", key?.Where(a => !string.IsNullOrEmpty(a)).ToArray() ?? new [] {{ """" }});
+		/// <summary>
+		/// {3}顶层键值是否同时包含，如：{{""a"":1, ""b"":2}}'::jsonb ?&amp; ARRAY['a', 'b']
+		/// </summary>
+		/// <param name=""keys"">查找的keys</param>
+		/// <returns></returns>
+		public {0}SelectBuild Where{1}ContainKeys(params string[][] keys) => this.Where1Or(@""a.""""{3}"""" ?& ARRAY[{{0}}]"", keys?.Where(a => a != null).Select(a => a.Where(b => !string.IsNullOrEmpty(b))).ToArray() ?? new [] {{ new [] {{ """" }} }});
+		/// <summary>
+		/// {3}顶层键值是否任意包含一个，如：{{""a"":1, ""b"":2}}'::jsonb ?| ARRAY['a', 'b']
+		/// </summary>
+		/// <param name=""keys"">查找的keys</param>
+		/// <returns></returns>
+		public {0}SelectBuild Where{1}ContainKeysAny(params string[][] keys) => this.Where1Or(@""a.""""{3}"""" ?| ARRAY[{{0}}]"", keys?.Where(a => a != null).Select(a => a.Where(b => !string.IsNullOrEmpty(b))).ToArray() ?? new [] {{ new [] {{ """" }} }});", uClass_Name, fkcsBy, csType.Replace("?", ""), col.Name, col.SqlType);
+						return;
+					}
+
+					if (col.Type == NpgsqlDbType.Hstore) {
+						sb6.AppendFormat(@"
+		/// <summary>
+		/// {3}是否包含字典(操作符：@&gt;)
+		/// </summary>
+		/// <param name=""{1}"">查找的字典</param>
+		/// <returns></returns>
+		public {0}SelectBuild Where{1}Contain(params IDictionary[] {1}) {{
 			if ({1} == null) return this.Where(@""a.""""{3}"""" IS NULL"");
-			return this.Where1Or(@""a.""""{3}"""" @> {{0}}::jsonb"", {1}.Select(a => a?.ToString()).Where(a => !string.IsNullOrEmpty(a)).ToArray());
-		}}", uClass_Name, fkcsBy, csType.Replace("?", ""), col.Name, col.SqlType);
+			List<string[]> pgarrs = new List<string[]>();
+			foreach (var dic in {1}) {{
+				var dicKeys = new string[dic.Count];
+				var dicVals = new string[dic.Count];
+				dic.Keys.CopyTo(dicKeys, 0);
+				dic.Values.CopyTo(dicVals, 0);
+				var pgarr = new string[dic.Count * 2];
+				for (var a = 0; a < dic.Count; a++) (pgarr[a * 2], pgarr[a * 2 + 1]) = (dicKeys[a], dicVals[a]);
+				pgarrs.Add(pgarr);
+			}}
+			return this.Where1Or(@""a.""""{3}"""" @> hstore(ARRAY[{{0}}])"", pgarrs.ToArray());
+		}}
+		/// <summary>
+		/// {3}键值是否包含(操作符：?)
+		/// </summary>
+		/// <param name=""key"">查找的key</param>
+		/// <returns></returns>
+		public {0}SelectBuild Where{1}ContainKey(params string[] key) => this.Where1Or(@""a.""""{3}"""" ? {{0}}"", key?.ToArray() ?? new [] {{ """" }});
+		/// <summary>
+		/// {3}键值是否同时包含(操作符：?&amp;)
+		/// </summary>
+		/// <param name=""keys"">查找的keys</param>
+		/// <returns></returns>
+		public {0}SelectBuild Where{1}ContainKeys(params string[][] keys) => this.Where1Or(@""a.""""{3}"""" ?& ARRAY[{{0}}]"", keys?.Where(a => a != null).Select(a => a.Where(b => !string.IsNullOrEmpty(b))).ToArray() ?? new [] {{ new [] {{ """" }} }});
+		/// <summary>
+		/// {3}键值是否任意包含一个(操作符：?|)
+		/// </summary>
+		/// <param name=""keys"">查找的keys</param>
+		/// <returns></returns>
+		public {0}SelectBuild Where{1}ContainKeysAny(params string[][] keys) => this.Where1Or(@""a.""""{3}"""" ?| ARRAY[{{0}}]"", keys?.Where(a => a != null).Select(a => a.Where(b => !string.IsNullOrEmpty(b))).ToArray() ?? new [] {{ new [] {{ """" }} }});", uClass_Name, fkcsBy, csType.Replace("?", ""), col.Name, col.SqlType);
 						return;
 					}
 
 					if (csType == "bool?" || csType == "Guid?") {
 						sb6.AppendFormat(@"
-		public {0}SelectBuild Where{1}(params {2}[] {1}) {{
-			return this.Where1Or(@""a.""""{3}"""" = {{0}}"", {1});
-		}}", uClass_Name, fkcsBy, col.IsPrimaryKey ? csType.Replace("?", "") : csType, col.Name);
+		public {0}SelectBuild Where{1}(params {2}[] {1}) => this.Where1Or(@""a.""""{3}"""" = {{0}}"", {1});", uClass_Name, fkcsBy, col.IsPrimaryKey ? csType.Replace("?", "") : csType, col.Name);
 						return;
 					}
 					if (col.Type == NpgsqlDbType.Smallint || col.Type == NpgsqlDbType.Integer || col.Type == NpgsqlDbType.Bigint ||
 						col.Type == NpgsqlDbType.Numeric || col.Type == NpgsqlDbType.Real || col.Type == NpgsqlDbType.Double || col.Type == NpgsqlDbType.Money) {
 						sb6.AppendFormat(@"
-		public {0}SelectBuild Where{1}(params {2}[] {1}) {{
-			return this.Where1Or(@""a.""""{3}"""" = {{0}}"", {1});
-		}}", uClass_Name, fkcsBy, col.IsPrimaryKey ? csType.Replace("?", "") : csType, col.Name);
+		public {0}SelectBuild Where{1}(params {2}[] {1}) => this.Where1Or(@""a.""""{3}"""" = {{0}}"", {1});", uClass_Name, fkcsBy, col.IsPrimaryKey ? csType.Replace("?", "") : csType, col.Name);
 						sb6.AppendFormat(@"
-		public {0}SelectBuild Where{1}Range({2} begin) {{
-			return base.Where(@""a.""""{3}"""" >= {{0}}"", begin);
-		}}
-		public {0}SelectBuild Where{1}Range({2} begin, {2} end) {{
-			if (end == null) return Where{1}Range(begin);
-			return base.Where(@""a.""""{3}"""" between {{0}} and {{1}}"", begin, end);
-		}}", uClass_Name, fkcsBy, csType, col.Name);
+		public {0}SelectBuild Where{1}Range({2} begin) => base.Where(@""a.""""{3}"""" >= {{0}}"", begin);
+		public {0}SelectBuild Where{1}Range({2} begin, {2} end) => end == null ? this.Where{1}Range(begin) : base.Where(@""a.""""{3}"""" between {{0}} and {{1}}"", begin, end);", uClass_Name, fkcsBy, csType, col.Name);
 						return;
 					}
 					if (col.Type == NpgsqlDbType.Timestamp || col.Type == NpgsqlDbType.TimestampTZ || col.Type == NpgsqlDbType.Date ||
 						col.Type == NpgsqlDbType.Time || col.Type == NpgsqlDbType.TimeTZ || col.Type == NpgsqlDbType.Interval) {
 						if (col.IsPrimaryKey)
 							sb6.AppendFormat(@"
-		public {0}SelectBuild Where{1}({2} {1}) {{
-			return base.Where(@""a.""""{3}"""" = {{0}}"", {1});
-		}}", uClass_Name, fkcsBy, csType, col.Name);
+		public {0}SelectBuild Where{1}({2} {1}) => base.Where(@""a.""""{3}"""" = {{0}}"", {1});", uClass_Name, fkcsBy, csType, col.Name);
 						sb6.AppendFormat(@"
-		public {0}SelectBuild Where{1}Range({2} begin) {{
-			return base.Where(@""a.""""{3}"""" >= {{0}}"", begin);
-		}}
-		public {0}SelectBuild Where{1}Range({2} begin, {2} end) {{
-			if (end == null) return Where{1}Range(begin);
-			return base.Where(@""a.""""{3}"""" between {{0}} and {{1}}"", begin, end);
-		}}", uClass_Name, fkcsBy, csType, col.Name);
+		public {0}SelectBuild Where{1}Range({2} begin) => base.Where(@""a.""""{3}"""" >= {{0}}"", begin);
+		public {0}SelectBuild Where{1}Range({2} begin, {2} end) => end == null ? this.Where{1}Range(begin) : base.Where(@""a.""""{3}"""" between {{0}} and {{1}}"", begin, end);", uClass_Name, fkcsBy, csType, col.Name);
 						return;
 					}
 					if ((col.Type == NpgsqlDbType.Integer || col.Type == NpgsqlDbType.Bigint) && (lname == "status" || lname.StartsWith("status_") || lname.EndsWith("_status"))) {
@@ -2131,34 +2160,18 @@ namespace {0}.BLL {{
 					}
 					if (col.Type == NpgsqlDbType.Enum) {
 						sb6.AppendFormat(@"
-		public {0}SelectBuild Where{1}_IN(params {3}[] {1}s) {{
-			return this.Where1Or(@""a.""""{4}"""" = {{0}}"", {1}s);
-		}}
-		public {0}SelectBuild Where{1}({2} {1}1) {{
-			return this.Where{1}_IN({1}1);
-		}}
-		#region Where{1}
-		public {0}SelectBuild Where{1}({2} {1}1, {2} {1}2) {{
-			return this.Where{1}_IN({1}1, {1}2);
-		}}
-		public {0}SelectBuild Where{1}({2} {1}1, {2} {1}2, {2} {1}3) {{
-			return this.Where{1}_IN({1}1, {1}2, {1}3);
-		}}
-		public {0}SelectBuild Where{1}({2} {1}1, {2} {1}2, {2} {1}3, {2} {1}4) {{
-			return this.Where{1}_IN({1}1, {1}2, {1}3, {1}4);
-		}}
-		public {0}SelectBuild Where{1}({2} {1}1, {2} {1}2, {2} {1}3, {2} {1}4, {2} {1}5) {{
-			return this.Where{1}_IN({1}1, {1}2, {1}3, {1}4, {1}5);
-		}}
-		#endregion", uClass_Name, fkcsBy, csType.Replace("?", ""), csType, col.Name);
+		public {0}SelectBuild Where{1}_IN(params {3}[] {1}s) => this.Where1Or(@""a.""""{4}"""" = {{0}}"", {1}s);
+		public {0}SelectBuild Where{1}({2} {1}1) => this.Where{1}_IN({1}1);
+		public {0}SelectBuild Where{1}({2} {1}1, {2} {1}2) => this.Where{1}_IN({1}1, {1}2);
+		public {0}SelectBuild Where{1}({2} {1}1, {2} {1}2, {2} {1}3) => this.Where{1}_IN({1}1, {1}2, {1}3);
+		public {0}SelectBuild Where{1}({2} {1}1, {2} {1}2, {2} {1}3, {2} {1}4) => this.Where{1}_IN({1}1, {1}2, {1}3, {1}4);
+		public {0}SelectBuild Where{1}({2} {1}1, {2} {1}2, {2} {1}3, {2} {1}4, {2} {1}5) => this.Where{1}_IN({1}1, {1}2, {1}3, {1}4, {1}5);", uClass_Name, fkcsBy, csType.Replace("?", ""), csType, col.Name);
 						return;
 					}
 					if (csType == "string") {
 						if (col.Length < 301)
 							sb6.AppendFormat(@"
-		public {0}SelectBuild Where{1}(params {2}[] {1}) {{
-			return this.Where1Or(@""a.""""{3}"""" = {{0}}"", {1});
-		}}
+		public {0}SelectBuild Where{1}(params {2}[] {1}) => this.Where1Or(@""a.""""{3}"""" = {{0}}"", {1});
 		public {0}SelectBuild Where{1}Regex(string pattern, bool isNotMatch = false, bool ignoreCase = true) {{
 			var opt = isNotMatch ? (ignoreCase ? ""!~*"" : ""!~"") : (ignoreCase ? ""~*"" : ""~"");
 			return this.Where($@""a.""""{3}"""" {{opt}} {{{{0}}}}"", pattern);
@@ -2178,10 +2191,8 @@ namespace {0}.BLL {{
 		/// <param name=""point"">经纬度</param>
 		/// <param name=""meter"">米(=0时无限制)</param>
 		/// <returns></returns>
-		public {0}SelectBuild Where{1}ST_dwithin(NpgsqlPoint point, double meter = 0) {{
-			return this.Where(meter > 0, @""st_dwithin({{0}}::geometry::geography, a.""""{3}""""::geometry::geography, {{1}})"", new NpgsqlParameter {{ NpgsqlDbType = NpgsqlDbType.Point, Value = point }}, meter)
-				.OrderBy(@""{{0}} <-> a.""""{3}"""""", new NpgsqlParameter {{ NpgsqlDbType = NpgsqlDbType.Point, Value = point }});
-		}}", uClass_Name, fkcsBy, csType.Replace("?", ""), col.Name);
+		public {0}SelectBuild Where{1}ST_dwithin(NpgsqlPoint point, double meter = 0) => this.Where(meter > 0, @""st_dwithin({{0}}::geometry::geography, a.""""{3}""""::geometry::geography, {{1}})"", new NpgsqlParameter {{ NpgsqlDbType = NpgsqlDbType.Point, Value = point }}, meter)
+			.OrderBy(@""{{0}} <-> a.""""{3}"""""", new NpgsqlParameter {{ NpgsqlDbType = NpgsqlDbType.Point, Value = point }});", uClass_Name, fkcsBy, csType.Replace("?", ""), col.Name);
 						return;
 					}
 					if (csType == "PostgisGeometry") {
@@ -3228,6 +3239,14 @@ u.UpdateDiy.SetLogin_time(DateTime.Now).ExecuteNonQuery();
 	> 表.Select.Where字段Any、表.UpdateDiy(1).Set字段Join
 * 字段类型 jsonb，会生成
 	> 表.Select.Where字段Contain
+	> 表.Select.Where字段ContainKey
+	> 表.Select.Where字段ContainKeys
+	> 表.Select.Where字段ContainKeysAny
+* 字段类型 hstore，会生成
+	> 表.Select.Where字段Contain
+	> 表.Select.Where字段ContainKey
+	> 表.Select.Where字段ContainKeys
+	> 表.Select.Where字段ContainKeysAny
 * 100%的数据类型被支持
 ", solutionName))));
 				clearSb();
