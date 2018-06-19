@@ -252,7 +252,7 @@ namespace Npgsql {
 			return this.Where(true, filter, parms);
 		}
 		protected SelectBuild<TReturnInfo> Where(bool isadd, string filter, params object[] parms) {
-			if (isadd) _where = string.Concat(_where, " AND (", Executer.Addslashes(this.ParseCondi(filter, parms), parms), ")");
+			if (isadd) _where = string.Concat(_where, " AND (", this.ParseCondi(filter, parms), ")");
 			return this;
 		}
 		protected string ParseCondi(string filter, params object[] parms) {
@@ -269,7 +269,7 @@ namespace Npgsql {
 						filter = filter.Replace($"{{{a}}}", $"@{param.ParameterName}");
 					}
 			}
-			return filter;
+			return Executer.Addslashes(filter, parms);
 		}
 		protected SelectBuild<TReturnInfo> GroupBy(string groupby) {
 			_groupby = groupby;
@@ -282,7 +282,7 @@ namespace Npgsql {
 		}
 		protected SelectBuild<TReturnInfo> Having(bool isadd, string filter, params object[] parms) {
 			if (string.IsNullOrEmpty(_groupby)) return this;
-			if (isadd) _having = string.Concat(_having, " AND (", Executer.Addslashes(this.ParseCondi(filter, parms), parms), ")");
+			if (isadd) _having = string.Concat(_having, " AND (", this.ParseCondi(filter, parms), ")");
 			return this;
 		}
 		protected SelectBuild<TReturnInfo> Sort(string orderby, params object[] parms) {
