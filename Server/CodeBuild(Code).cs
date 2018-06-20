@@ -1044,7 +1044,7 @@ namespace {0}.Model {{
 		public {0}Info Obj_{1} {{
 			get {{ return _obj_{1} ?? (_{4} == null ? null : (_obj_{1} = BLL.{0}.GetItem(_{5}))); }}
 			internal set {{ _obj_{1} = value; }}
-		}}", UFString(t2.ClassName), CodeBuild.LFString(t2.ClassName), solutionName, UFString(fk.Columns[0].Name), UFString(table.PrimaryKeys[0].Name), string.Format(GetCSTypeValue(table.PrimaryKeys[0].Type), UFString(table.PrimaryKeys[0].Name)));
+		}}", UFString(t2.ClassName), LFString(t2.ClassName), solutionName, UFString(fk.Columns[0].Name), UFString(table.PrimaryKeys[0].Name), string.Format(GetCSTypeValue(table.PrimaryKeys[0].Type), UFString(table.PrimaryKeys[0].Name)));
 							string objs_key = string.Format("Obj_{0}", f2);
 							if (!dic_objs.ContainsKey(objs_key))
 								dic_objs.Add(objs_key, obj_value);
