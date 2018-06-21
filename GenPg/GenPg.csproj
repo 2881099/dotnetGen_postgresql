@@ -11,7 +11,7 @@
     <Description>用于快速创建和更新 .NETCore 2.1 + PostgreSQL 项目，非常合适敏捷开发；</Description>
     <PackageProjectUrl>https://github.com/2881099/dotnetgen_postgresql</PackageProjectUrl>
     <RepositoryUrl>https://github.com/2881099/dotnetgen_postgresql</RepositoryUrl>
-    <Version>1.0.11</Version>
+    <Version>1.0.12</Version>
     <PackageTags>生成器,postgresql,core,pgsql</PackageTags>
   </PropertyGroup>
   <ItemGroup>

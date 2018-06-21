@@ -424,14 +424,6 @@ using NpgsqlTypes;
 using {0}.Model;
 
 public static partial class {0}ExtensionMethods {{
-	public static double Distance(this NpgsqlPoint? that, NpgsqlPoint point) => that?.Distance(point) ?? 0;
-	public static double Distance(this NpgsqlPoint that, NpgsqlPoint point) {{
-		double radLat1 = (double)(that.Y) * Math.PI / 180d;
-		double radLng1 = (double)(that.X) * Math.PI / 180d;
-		double radLat2 = (double)(point.Y) * Math.PI / 180d;
-		double radLng2 = (double)(point.X) * Math.PI / 180d;
-		return 2 * Math.Asin(Math.Sqrt(Math.Pow(Math.Sin((radLat1 - radLat2) / 2), 2) + Math.Cos(radLat1) * Math.Cos(radLat2) * Math.Pow(Math.Sin((radLng1 - radLng2) / 2), 2))) * 6378137;
-	}}
 {1}
 	public static IDictionary[] GetBson(IEnumerable items, Delegate func = null) {{
 		List<IDictionary> ret = new List<IDictionary>();
@@ -463,7 +455,7 @@ public static partial class {0}ExtensionMethods {{
 		<AssemblyName>{0}.db</AssemblyName>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include=""dng.Pgsql"" Version=""1.0.3"" />
+		<PackageReference Include=""dng.Pgsql"" Version=""1.0.4"" />
 	</ItemGroup>
 </Project>
 ";

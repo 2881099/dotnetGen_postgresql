@@ -267,12 +267,12 @@ Github: https://github.com/2881099/dotnetgen_postgresql
 					if (appsettings["Logging"]["LogLevel"]["Microsoft"] == null) appsettings["Logging"]["LogLevel"]["Microsoft"] = "Information";
 					var newtxt = appsettings.ToString();
 					if (newtxt != oldtxt) File.WriteAllText(appsettingsPath, newtxt, Encoding.UTF8);
-					//增加当前目录 .csproj nuguet 引用 <PackageReference Include="dng.Pgsql" Version="1.0.3" />
+					//增加当前目录 .csproj nuguet 引用 <PackageReference Include="dng.Pgsql" Version="1.0.4" />
 					string csprojPath = Directory.GetFiles(OutputPath, "*.csproj").FirstOrDefault();
 					if (!string.IsNullOrEmpty(csprojPath) && File.Exists(csprojPath)) {
-						if (Regex.IsMatch(File.ReadAllText(csprojPath), @"dng\.Pgsql""\s+Version=""1\.0\.3", RegexOptions.IgnoreCase) == false) {
+						if (Regex.IsMatch(File.ReadAllText(csprojPath), @"dng\.Pgsql""\s+Version=""1\.0\.4", RegexOptions.IgnoreCase) == false) {
 							System.Diagnostics.Process pro = new System.Diagnostics.Process();
-							pro.StartInfo = new System.Diagnostics.ProcessStartInfo("dotnet", "add package dng.Pgsql --version 1.0.3") {
+							pro.StartInfo = new System.Diagnostics.ProcessStartInfo("dotnet", "add package dng.Pgsql --version 1.0.4") {
 								WorkingDirectory = OutputPath
 							};
 							pro.Start();
