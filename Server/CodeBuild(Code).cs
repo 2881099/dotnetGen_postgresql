@@ -905,7 +905,7 @@ namespace {0}.Model {{
 					string newguid = "";
 					foreach (ColumnInfo guidpk in table.PrimaryKeys)
 						if (guidpk.CsType == "Guid?") newguid += string.Format(@"
-			this.{0} = BLL.RedisHelper.NewMongodbId();", UFString(guidpk.Name));
+			this.{0} = BLL.PSqlHelper.NewMongodbId();", UFString(guidpk.Name));
 
 					if (table.Columns.Count > table.PrimaryKeys.Count || !string.IsNullOrEmpty(newguid)) {
 						ColumnInfo colUpdateTime = table.Columns.Find(delegate (ColumnInfo fcc) { return fcc.Name.ToLower() == "update_time" && fcc.CsType == "DateTime?"; });
@@ -1473,8 +1473,8 @@ namespace {0}.BLL {{
 		internal static readonly int itemCacheTimeout;
 
 		static {1}() {{
-			if (!int.TryParse(RedisHelper.Configuration[""{0}_BLL_ITEM_CACHE:Timeout_{1}""], out itemCacheTimeout))
-				int.TryParse(RedisHelper.Configuration[""{0}_BLL_ITEM_CACHE:Timeout""], out itemCacheTimeout);
+			if (!int.TryParse(PSqlHelper.CacheStrategy[""Timeout_{1}""], out itemCacheTimeout))
+				int.TryParse(PSqlHelper.CacheStrategy[""Timeout""], out itemCacheTimeout);
 		}}", solutionName, uClass_Name);
 
 				Dictionary<string, bool> uniques_dic = new Dictionary<string, bool>();
@@ -1564,11 +1564,11 @@ namespace {0}.BLL {{
 					*/
 
 					sb3.AppendFormat(@"
-		public static {1}Info GetItem{2}({4}) => RedisHelper.Cache(string.Concat(""{0}_BLL_{1}{2}_"", {3}), itemCacheTimeout, () => Select{7}.ToOne());", solutionName, uClass_Name, cs[0].IsPrimaryKey ? string.Empty : parmsBy, parmsNodeTypeUpdateCacheRemove.Replace("item.", ""),
+		public static {1}Info GetItem{2}({4}) => PSqlHelper.CacheShell(string.Concat(""{0}_BLL_{1}{2}_"", {3}), itemCacheTimeout, () => Select{7}.ToOne());", solutionName, uClass_Name, cs[0].IsPrimaryKey ? string.Empty : parmsBy, parmsNodeTypeUpdateCacheRemove.Replace("item.", ""),
 		parms, parmsNoneType, cacheCond, whereCondi);
 
 					bll_async_code += string.Format(@"
-		async public static Task<{1}Info> GetItem{2}Async({4}) => await RedisHelper.CacheAsync(string.Concat(""{0}_BLL_{1}{2}_"", {3}), itemCacheTimeout, async () => await Select{7}.ToOneAsync());", solutionName, uClass_Name, cs[0].IsPrimaryKey ? string.Empty : parmsBy, parmsNodeTypeUpdateCacheRemove.Replace("item.", ""),
+		async public static Task<{1}Info> GetItem{2}Async({4}) => await PSqlHelper.CacheShellAsync(string.Concat(""{0}_BLL_{1}{2}_"", {3}), itemCacheTimeout, async () => await Select{7}.ToOneAsync());", solutionName, uClass_Name, cs[0].IsPrimaryKey ? string.Empty : parmsBy, parmsNodeTypeUpdateCacheRemove.Replace("item.", ""),
 		parms, parmsNoneType, cacheCond, whereCondi);
 
 					sb4.AppendFormat(@"
@@ -1635,8 +1635,8 @@ namespace {0}.BLL {{
 					string cspk2GuidSetValuesss = "";
 					foreach (ColumnInfo cspk2 in table.Columns) {
 						if (cspk2.CsType == "Guid?" && cspk2.IsPrimaryKey) {
-							cspk2GuidSetValue += string.Format("\r\n			if (item.{0} == null) item.{0} = RedisHelper.NewMongodbId();", UFString(cspk2.Name));
-							cspk2GuidSetValuesss += string.Format("\r\n			foreach (var item in items) if (item != null && item.{0} == null) item.{0} = RedisHelper.NewMongodbId();", UFString(cspk2.Name));
+							cspk2GuidSetValue += string.Format("\r\n			if (item.{0} == null) item.{0} = PSqlHelper.NewMongodbId();", UFString(cspk2.Name));
+							cspk2GuidSetValuesss += string.Format("\r\n			foreach (var item in items) if (item != null && item.{0} == null) item.{0} = PSqlHelper.NewMongodbId();", UFString(cspk2.Name));
 						}
 						if (cspk2.CsType == "DateTime?" && cspk2.Name == "create_time" ||
 							cspk2.CsType == "DateTime?" && cspk2.Name == "update_time") {
@@ -1663,7 +1663,7 @@ namespace {0}.BLL {{
 			foreach (var item in items) {{{2}
 			}}
 			if (PSqlHelper.Instance.CurrentThreadTransaction != null) PSqlHelper.Instance.PreRemove(keys.Distinct().ToArray());
-			else RedisHelper.Remove(keys.Distinct().ToArray());
+			else PSqlHelper.CacheRemove(key);
 		}}
 		#endregion
 {1}
@@ -1686,9 +1686,9 @@ namespace {0}.BLL {{
 			var keysIdx = 0;
 			foreach (var item in items) {{{2}
 			}}
-			await RedisHelper.RemoveAsync(keys.Distinct().ToArray());
+			await PSqlHelper.CacheRemoveAsync(key);
 		}}
-", uClass_Name, "", redisRemove.Replace("RedisHelper.Remove", "await RedisHelper.RemoveAsync"), cspk2GuidSetValue, cspk2GuidSetValuesss, table.Uniques.Count);
+", uClass_Name, "", redisRemove, cspk2GuidSetValue, cspk2GuidSetValuesss, table.Uniques.Count);
 					#endregion
 				}
 
@@ -2224,7 +2224,7 @@ namespace {0}.BLL {{
 							if (col88.IsIdentity) ;
 							else if (csType == "Guid?") {
 								itemSetValuePKInsert += string.Format(@"
-			item.{0} = BLL.RedisHelper.NewMongodbId();", csUName);
+			item.{0} = BLL.PSqlHelper.NewMongodbId();", csUName);
 							} else {
 								itemSetValuePKInsert += string.Format(@"
 			item.{0} = {0};", csUName);
@@ -2795,9 +2795,9 @@ namespace {0}.BLL {{
 			//loc1.Add(new BuildInfo(string.Concat(CONST.corePath, solutionName, @".db\BLL\", basicName, @"\ItemCache.cs"), Deflate.Compress(sb1.ToString())));
 			clearSb();
 			#endregion
-			#region BLL RedisHelper.cs
-			sb1.AppendFormat(CONST.BLL_Build_RedisHelper_cs, solutionName);
-			loc1.Add(new BuildInfo(string.Concat(CONST.corePath, solutionName, @".db\BLL\", basicName, @"\RedisHelper.cs"), Deflate.Compress(sb1.ToString())));
+			#region BLL CSRedisClient.cs
+			sb1.AppendFormat(CONST.BLL_Build_CSRedisClient_cs, solutionName);
+			loc1.Add(new BuildInfo(string.Concat(CONST.corePath, solutionName, @".db\BLL\", basicName, @"\CSRedisClient.cs"), Deflate.Compress(sb1.ToString())));
 			clearSb();
 			#endregion
 			#region Model ExtensionMethods.cs 扩展方法
@@ -3005,7 +3005,7 @@ var users2 = BLL.User.Select.WhereStatus(正常).Aggregate<(int id, string title)>
 PSqlHelper.Transaction(() => {{
 	if (this.Balance.UpdateDiy.SetAmountIncrement(-num).ExecuteNonQuery() <= 0) throw new Exception(""余额不足"");
 	extdata[""amountNew""] = this.Balance.Amount.ToString();
-	extdata[""balanceChangelogId""] = RedisHelper.NewMongodbId();
+	extdata[""balanceChangelogId""] = PSqlHelper.NewMongodbId();
 	order = this.AddBet_order(Amount: 1, Count: num, Count_off: num, Extdata: extdata, Status: Et_bet_order_statusENUM.NEW, Type: Et_bet_tradetypeENUM.拆分);
 }});
 ```
