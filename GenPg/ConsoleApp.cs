@@ -276,8 +276,14 @@ Github: https://github.com/2881099/dotnetgen_postgresql
 								WorkingDirectory = OutputPath
 							};
 							pro.Start();
+							pro.WaitForExit();
 						}
 					}
+				}
+				if (File.Exists(Path.Combine(OutputPath, "GenPg只更新db.bat")) == false) {
+					var batPath = Path.Combine(OutputPath, $"GenPg_{this.SolutionName}_{this.Server}_{this.Database}.bat");
+					if (File.Exists(batPath) == false) File.WriteAllText(batPath, $@"
+GenPg {this.Server}:{this.Port} -U {this.Username} -P {this.Password} -D {this.Database} -N {this.SolutionName}");
 				}
 			}
 			this._socket.Close();
