@@ -3,7 +3,7 @@
 
 本项目为生成器，用于快速创建和更新 .NETCore 2.1 + PostgreSQL 项目，非常合适敏捷开发；
 
-类型映射参考 http://www.postgres.cn/docs/9.4/datatype.html 开发；
+类型映射参考 http://www.postgres.cn/docs/9.6/datatype.html 开发；
 
 优势：
  * 1、根据主键、唯一键、外键（1对1，1对多，多对多）生成功能丰富的数据库 SDK；

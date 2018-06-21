@@ -1,8 +1,8 @@
 {
-  "profiles": {
-    "GenPg": {
-      "commandName": "Project",
-      "commandLineArgs": "103.253.41.44:54332 -U anzhong -P A1.3212OZ5P -D anzhong -N anzhong -O \"C:\\Users\\Administrator\\Desktop\\testnew\""
-    }
-  }
+	"profiles": {
+		"GenPg": {
+			"commandName": "Project",
+			"commandLineArgs": "103.253.41.44:54332 -U anzhong -P A1.3212OZ5P -D anzhong -N anzhong -O \"C:\\Users\\Administrator\\Desktop\\testnew\""
+		}
+	}
 }

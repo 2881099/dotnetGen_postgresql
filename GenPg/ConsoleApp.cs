@@ -367,3 +367,4 @@ Github: https://github.com/2881099/dotnetgen_postgresql
 		}
 	}
 }
+
