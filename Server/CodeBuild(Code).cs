@@ -1568,7 +1568,7 @@ namespace {0}.BLL {{
 		parms, parmsNoneType, cacheCond, whereCondi);
 
 					bll_async_code += string.Format(@"
-		async public static Task<{1}Info> GetItem{2}Async({4}) => await PSqlHelper.CacheShellAsync(string.Concat(""{0}_BLL_{1}{2}_"", {3}), itemCacheTimeout, async () => await Select{7}.ToOneAsync());", solutionName, uClass_Name, cs[0].IsPrimaryKey ? string.Empty : parmsBy, parmsNodeTypeUpdateCacheRemove.Replace("item.", ""),
+		async public static Task<{1}Info> GetItem{2}Async({4}) => await PSqlHelper.CacheShellAsync(string.Concat(""{0}_BLL_{1}{2}_"", {3}), itemCacheTimeout, () => Select{7}.ToOneAsync());", solutionName, uClass_Name, cs[0].IsPrimaryKey ? string.Empty : parmsBy, parmsNodeTypeUpdateCacheRemove.Replace("item.", ""),
 		parms, parmsNoneType, cacheCond, whereCondi);
 
 					sb4.AppendFormat(@"
@@ -1663,7 +1663,7 @@ namespace {0}.BLL {{
 			foreach (var item in items) {{{2}
 			}}
 			if (PSqlHelper.Instance.CurrentThreadTransaction != null) PSqlHelper.Instance.PreRemove(keys.Distinct().ToArray());
-			else PSqlHelper.CacheRemove(key);
+			else PSqlHelper.CacheRemove(keys);
 		}}
 		#endregion
 {1}
@@ -1686,7 +1686,7 @@ namespace {0}.BLL {{
 			var keysIdx = 0;
 			foreach (var item in items) {{{2}
 			}}
-			await PSqlHelper.CacheRemoveAsync(key);
+			await PSqlHelper.CacheRemoveAsync(keys);
 		}}
 ", uClass_Name, "", redisRemove, cspk2GuidSetValue, cspk2GuidSetValuesss, table.Uniques.Count);
 					#endregion
@@ -2793,11 +2793,6 @@ namespace {0}.BLL {{
 			#region BLL ItemCache.cs
 			sb1.AppendFormat(CONST.BLL_Build_ItemCache_cs, solutionName);
 			//loc1.Add(new BuildInfo(string.Concat(CONST.corePath, solutionName, @".db\BLL\", basicName, @"\ItemCache.cs"), Deflate.Compress(sb1.ToString())));
-			clearSb();
-			#endregion
-			#region BLL CSRedisClient.cs
-			sb1.AppendFormat(CONST.BLL_Build_CSRedisClient_cs, solutionName);
-			loc1.Add(new BuildInfo(string.Concat(CONST.corePath, solutionName, @".db\BLL\", basicName, @"\CSRedisClient.cs"), Deflate.Compress(sb1.ToString())));
 			clearSb();
 			#endregion
 			#region Model ExtensionMethods.cs À©Õ¹·½·¨

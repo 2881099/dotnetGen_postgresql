@@ -253,9 +253,8 @@ Github: https://github.com/2881099/dotnetgen_postgresql
 					var oldtxt = appsettings.ToString();
 					if (appsettings["ConnectionStrings"] == null) appsettings["ConnectionStrings"] = new JObject();
 					if (appsettings["ConnectionStrings"][$"{this.SolutionName}_npgsql"] == null) appsettings["ConnectionStrings"][$"{this.SolutionName}_npgsql"] = this.ConnectionString + "Pooling=true;Maximum Pool Size=100";
-					if (appsettings["ConnectionStrings"]["redis"] == null) appsettings["ConnectionStrings"]["redis"] = JToken.FromObject(new {
-						ip = "127.0.0.1", port = 6379, pass = "", database = 13, poolsize = 50, name = this.SolutionName
-					});
+					if (appsettings["ConnectionStrings"]["redis1"] == null) appsettings["ConnectionStrings"]["redis1"] = $"127.0.0.1:6379,password=,defaultDatabase=13,poolsize=10,prefix={this.SolutionName}";
+					if (appsettings["ConnectionStrings"]["redis2"] == null) appsettings["ConnectionStrings"]["redis2"] = $"127.0.0.1:6379,password=,defaultDatabase=13,poolsize=10,prefix={this.SolutionName}";
 					if (appsettings[$"{this.SolutionName}_BLL_ITEM_CACHE"] == null) appsettings[$"{this.SolutionName}_BLL_ITEM_CACHE"] = JToken.FromObject(new {
 						Timeout = 180
 					});
@@ -267,25 +266,64 @@ Github: https://github.com/2881099/dotnetgen_postgresql
 					if (appsettings["Logging"]["LogLevel"]["Microsoft"] == null) appsettings["Logging"]["LogLevel"]["Microsoft"] = "Information";
 					var newtxt = appsettings.ToString();
 					if (newtxt != oldtxt) File.WriteAllText(appsettingsPath, newtxt, Encoding.UTF8);
-					//增加当前目录 .csproj nuguet 引用 <PackageReference Include="dng.Pgsql" Version="1.1.1" />
+					//增加当前目录 .csproj nuguet 引用 <PackageReference Include="dng.Pgsql" Version="1.1.2" />
 					string csprojPath = Directory.GetFiles(OutputPath, "*.csproj").FirstOrDefault();
 					if (!string.IsNullOrEmpty(csprojPath) && File.Exists(csprojPath)) {
-						if (Regex.IsMatch(File.ReadAllText(csprojPath), @"dng\.Pgsql""\s+Version=""1\.1\.1", RegexOptions.IgnoreCase) == false) {
+						if (Regex.IsMatch(File.ReadAllText(csprojPath), @"dng\.Pgsql""\s+Version=""1\.1\.2", RegexOptions.IgnoreCase) == false) {
 							System.Diagnostics.Process pro = new System.Diagnostics.Process();
-							pro.StartInfo = new System.Diagnostics.ProcessStartInfo("dotnet", "add package dng.Pgsql --version 1.1.1") {
+							pro.StartInfo = new System.Diagnostics.ProcessStartInfo("dotnet", "add package dng.Pgsql --version 1.1.2") {
 								WorkingDirectory = OutputPath
 							};
 							pro.Start();
 							pro.WaitForExit();
 						}
-						if (Regex.IsMatch(File.ReadAllText(csprojPath), @"CSRedisCore""\s+Version=""2\.3\.0", RegexOptions.IgnoreCase) == false) {
+						if (Regex.IsMatch(File.ReadAllText(csprojPath), @"CSRedisCore""\s+Version=""2\.3\.2", RegexOptions.IgnoreCase) == false) {
 							System.Diagnostics.Process pro = new System.Diagnostics.Process();
-							pro.StartInfo = new System.Diagnostics.ProcessStartInfo("dotnet", "add package CSRedisCore --version 2.3.0") {
+							pro.StartInfo = new System.Diagnostics.ProcessStartInfo("dotnet", "add package CSRedisCore --version 2.3.2") {
 								WorkingDirectory = OutputPath
 							};
 							pro.Start();
 							pro.WaitForExit();
 						}
+					}
+					//向startup.cs注入代码
+					string startupPath = Path.Combine(OutputPath, "Startup.cs");
+					if (!string.IsNullOrEmpty(startupPath) && File.Exists(startupPath)) {
+						bool isChanged = false;
+						var startupCode = File.ReadAllText(startupPath);
+						if (startupCode.IndexOf("RedisHelper.Initialization") == -1) {
+							startupCode = Regex.Replace(startupCode, @"[\t ]+public\s+void\s+ConfigureServices\s*\(\s*IServiceCollection\s+(\w+)[^\{]+\{", m => {
+								isChanged = true;
+								return m.Groups[0].Value + $@"
+
+
+			//单redis节点模式，如需开启集群负载，请将注释去掉并做相应配置
+			RedisHelper.Initialization(
+				csredis: new CSRedis.CSRedisClient(//null,
+					//Configuration[""ConnectionStrings:redis2""],
+					Configuration[""ConnectionStrings:redis1""]),
+				serialize: value => Newtonsoft.Json.JsonConvert.SerializeObject(value),
+				deserialize: (data, type) => Newtonsoft.Json.JsonConvert.DeserializeObject(data, type));
+			services.AddSingleton<IDistributedCache>(new Microsoft.Extensions.Caching.Redis.CSRedisCache(RedisHelper.Instance));
+
+
+";
+							}, RegexOptions.Multiline);
+						}
+						if (startupCode.IndexOf(this.SolutionName + ".BLL.PSqlHelper.Initialization") == -1) {
+							startupCode = Regex.Replace(startupCode, @"[\t ]+public\s+void\s+Configure\s*\([^\{]+\{", m => {
+								isChanged = true;
+								return m.Groups[0].Value + $@"
+
+			
+			{this.SolutionName}.BLL.PSqlHelper.Initialization(app.ApplicationServices.GetService<IDistributedCache>(), Configuration.GetSection(""{this.SolutionName}_BLL_ITEM_CACHE""),
+				Configuration[""ConnectionStrings:{this.SolutionName}_npgsql""], loggerFactory.CreateLogger(""{this.SolutionName}_DAL_psqlhelper""));
+
+
+";
+							}, RegexOptions.Multiline);
+						}
+						if (isChanged) File.WriteAllText(startupPath, startupCode);
 					}
 				}
 				if (File.Exists(Path.Combine(OutputPath, "GenPg只更新db.bat")) == false) {
