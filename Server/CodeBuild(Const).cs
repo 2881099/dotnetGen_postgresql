@@ -99,7 +99,7 @@ namespace {0}.BLL {{
 	/// <summary>
 	/// dng.Pgsql¥˙¿Ì¿‡
 	/// </summary>
-	public abstract partial class PSqlHelper : DAL.PSqlHelper {{
+	public abstract partial class PSqlHelper : {0}.DAL.PSqlHelper {{
 	}}
 }}
 
@@ -417,8 +417,8 @@ public static partial class {0}ExtensionMethods {{
 		<AssemblyName>{0}.db</AssemblyName>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include=""dng.Pgsql"" Version=""1.1.2"" />
-		<PackageReference Include=""CSRedisCore"" Version=""2.3.2"" />
+		<PackageReference Include=""dng.Pgsql"" Version=""1.1.3"" />
+		<PackageReference Include=""CSRedisCore"" Version=""2.3.3"" />
 	</ItemGroup>
 </Project>
 ";
@@ -435,7 +435,7 @@ public static partial class {0}ExtensionMethods {{
 		<ProjectReference Include=""..\{0}.db\{0}.db.csproj"" />
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include=""Caching.CSRedis"" Version=""2.3.2"" />
+		<PackageReference Include=""Caching.CSRedis"" Version=""2.3.3"" />
 		<PackageReference Include=""Microsoft.AspNetCore.Mvc"" Version=""2.1.0"" />
 		<PackageReference Include=""Microsoft.AspNetCore.Session"" Version=""2.1.0"" />
 		<PackageReference Include=""Microsoft.AspNetCore.Diagnostics"" Version=""2.1.0"" />

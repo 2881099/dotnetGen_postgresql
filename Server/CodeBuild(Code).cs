@@ -1662,7 +1662,7 @@ namespace {0}.BLL {{
 			var keysIdx = 0;
 			foreach (var item in items) {{{2}
 			}}
-			if (PSqlHelper.Instance.CurrentThreadTransaction != null) PSqlHelper.Instance.PreRemove(keys.Distinct().ToArray());
+			if (PSqlHelper.Instance.CurrentThreadTransaction != null) PSqlHelper.Instance.PreRemove(keys);
 			else PSqlHelper.CacheRemove(keys);
 		}}
 		#endregion
