@@ -266,20 +266,20 @@ Github: https://github.com/2881099/dotnetgen_postgresql
 					if (appsettings["Logging"]["LogLevel"]["Microsoft"] == null) appsettings["Logging"]["LogLevel"]["Microsoft"] = "Information";
 					var newtxt = appsettings.ToString();
 					if (newtxt != oldtxt) File.WriteAllText(appsettingsPath, newtxt, Encoding.UTF8);
-					//增加当前目录 .csproj nuguet 引用 <PackageReference Include="dng.Pgsql" Version="1.1.3" />
+					//增加当前目录 .csproj nuguet 引用 <PackageReference Include="dng.Pgsql" Version="" />
 					string csprojPath = Directory.GetFiles(OutputPath, "*.csproj").FirstOrDefault();
 					if (!string.IsNullOrEmpty(csprojPath) && File.Exists(csprojPath)) {
-						if (Regex.IsMatch(File.ReadAllText(csprojPath), @"dng\.Pgsql""\s+Version=""1\.1\.3", RegexOptions.IgnoreCase) == false) {
+						if (Regex.IsMatch(File.ReadAllText(csprojPath), @"dng\.Pgsql""\s+Version=""", RegexOptions.IgnoreCase) == false) {
 							System.Diagnostics.Process pro = new System.Diagnostics.Process();
-							pro.StartInfo = new System.Diagnostics.ProcessStartInfo("dotnet", "add package dng.Pgsql --version 1.1.3") {
+							pro.StartInfo = new System.Diagnostics.ProcessStartInfo("dotnet", "add package dng.Pgsql") {
 								WorkingDirectory = OutputPath
 							};
 							pro.Start();
 							pro.WaitForExit();
 						}
-						if (Regex.IsMatch(File.ReadAllText(csprojPath), @"CSRedisCore""\s+Version=""2\.3\.6", RegexOptions.IgnoreCase) == false) {
+						if (Regex.IsMatch(File.ReadAllText(csprojPath), @"CSRedisCore""\s+Version=""", RegexOptions.IgnoreCase) == false) {
 							System.Diagnostics.Process pro = new System.Diagnostics.Process();
-							pro.StartInfo = new System.Diagnostics.ProcessStartInfo("dotnet", "add package CSRedisCore --version 2.3.6") {
+							pro.StartInfo = new System.Diagnostics.ProcessStartInfo("dotnet", "add package CSRedisCore") {
 								WorkingDirectory = OutputPath
 							};
 							pro.Start();
@@ -291,9 +291,9 @@ Github: https://github.com/2881099/dotnetgen_postgresql
 					if (!string.IsNullOrEmpty(startupPath) && File.Exists(startupPath)) {
 
 						//web项目才需要 Caching.CSRedis
-						if (Regex.IsMatch(File.ReadAllText(csprojPath), @"Caching.CSRedis""\s+Version=""2\.3\.6", RegexOptions.IgnoreCase) == false) {
+						if (Regex.IsMatch(File.ReadAllText(csprojPath), @"Caching.CSRedis""\s+Version=""", RegexOptions.IgnoreCase) == false) {
 							System.Diagnostics.Process pro = new System.Diagnostics.Process();
-							pro.StartInfo = new System.Diagnostics.ProcessStartInfo("dotnet", "add package Caching.CSRedis --version 2.3.6") {
+							pro.StartInfo = new System.Diagnostics.ProcessStartInfo("dotnet", "add package Caching.CSRedis") {
 								WorkingDirectory = OutputPath
 							};
 							pro.Start();
