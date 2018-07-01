@@ -1102,11 +1102,13 @@ namespace {0}.DAL {{
 		public object GetItem(NpgsqlDataReader dr, ref int dataIndex) {{
 			{0}Info item = new {0}Info();", uClass_Name);
 
+                int getItemIndex = 0;
 				foreach (ColumnInfo columnInfo in table.Columns) {
-					sb1.AppendFormat(@"
+                    ++getItemIndex;
+                    sb1.AppendFormat(@"
 			if (!dr.IsDBNull(++dataIndex)) item.{0} = {1};", (columnInfo.CsType == "JToken" ? "_" : "") + UFString(columnInfo.Name), GetDataReaderMethod(columnInfo.Type, columnInfo.CsType));
 					if (columnInfo.IsPrimaryKey)
-						sb1.AppendFormat(@" if (item.{0} == null) return null;", (columnInfo.CsType == "JToken" ? "_" : "") + UFString(columnInfo.Name));
+						sb1.AppendFormat(@" if (item.{0} == null) {{ dataIndex += {1}; return null; }}", (columnInfo.CsType == "JToken" ? "_" : "") + UFString(columnInfo.Name), table.Columns.Count - getItemIndex);
 				}
 
 				sb1.AppendFormat(@"
@@ -1125,11 +1127,13 @@ namespace {0}.DAL {{
 		}}
 		async public Task<(object result, int dataIndex)> GetItemAsync(NpgsqlDataReader dr, int dataIndex) {{
 			{0}Info item = new {0}Info();", uClass_Name);
-				foreach (ColumnInfo columnInfo in table.Columns) {
-					dal_async_code += string.Format(@"
+                getItemIndex = 0;
+                foreach (ColumnInfo columnInfo in table.Columns) {
+                    ++getItemIndex;
+                    dal_async_code += string.Format(@"
 			if (!await dr.IsDBNullAsync(++dataIndex)) item.{0} = {1};", (columnInfo.CsType == "JToken" ? "_" : "") + UFString(columnInfo.Name), GetDataReaderMethodAsync(columnInfo.Type, columnInfo.CsType));
 					if (columnInfo.IsPrimaryKey)
-						dal_async_code += string.Format(@" if (item.{0} == null) return (null, dataIndex);", (columnInfo.CsType == "JToken" ? "_" : "") + UFString(columnInfo.Name));
+						dal_async_code += string.Format(@" if (item.{0} == null) {{ dataIndex += {1}; return (null, dataIndex); }}", (columnInfo.CsType == "JToken" ? "_" : "") + UFString(columnInfo.Name), table.Columns.Count - getItemIndex);
 				}
 
 				dal_async_code += string.Format(@"
