@@ -2364,10 +2364,10 @@ namespace {0}.BLL {{
 					});
 
 					string str_mvcdel = string.Format(@"
-		async public Task<APIReturn> _Del([FromForm] {2}[] ids) {{
+		async public Task<APIReturn> _Del([FromForm] {2}[] id) {{
 			var dels = new List<object>();
-			foreach ({2} id in ids)
-				dels.Add(await {3}{1}.DeleteAsync(id));
+			foreach ({2} id2 in id)
+				dels.Add(await {3}{1}.DeleteAsync(id2));
 			if (dels.Count > 0) return APIReturn.成功.SetMessage($""删除成功，影响行数：{{dels.Count}}"").SetData(""dels"", dels);
 			return APIReturn.失败;
 		}}", solutionName, uClass_Name, table.PrimaryKeys[0].CsType.Replace("?", ""), uClass_Name == "User" ? "BLL." : "");
@@ -2379,10 +2379,10 @@ namespace {0}.BLL {{
 						}
 						pkParses = pkParses.Substring(2);
 						str_mvcdel = string.Format(@"
-		async public Task<APIReturn> _Del([FromForm] string[] ids) {{
+		async public Task<APIReturn> _Del([FromForm] string[] id) {{
 			var dels = new List<object>();
-			foreach (string id in ids) {{
-				string[] vs = id.Split(',');
+			foreach (string id2 in id) {{
+				string[] vs = id2.Split(',');
 				dels.Add(await {3}{1}.DeleteAsync({2}));
 			}}
 			if (dels.Count > 0) return APIReturn.成功.SetMessage($""删除成功，影响行数：{{dels.Count}}"").SetData(""dels"", dels);
@@ -2474,7 +2474,7 @@ namespace {0}.BLL {{
 <script type=""text/javascript"">
 	(function () {{
 		top.del_callback = function(rt) {{
-			if (rt.success) return top.mainViewNav.goto('./');
+			if (rt.success) return top.mainViewNav.goto('./?' + new Date().getTime());
 			alert(rt.message);
 		}};
 
@@ -2539,7 +2539,7 @@ namespace {0}.BLL {{
 <script type=""text/javascript"">
 	(function() {{
 		top.del_callback = function(rt) {{
-			if (rt.success) return top.mainViewNav.goto('./');
+			if (rt.success) return top.mainViewNav.goto('./?' + new Date().getTime());
 			alert(rt.message);
 		}};
 
@@ -2772,7 +2772,7 @@ namespace {0}.BLL {{
 <script type=""text/javascript"">
 	(function () {{
 		top.edit_callback = function (rt) {{
-			if (rt.success) return top.mainViewNav.goto('./');
+			if (rt.success) return top.mainViewNav.goto('./?' + new Date().getTime());
 			alert(rt.message);
 		}};
 {2}
