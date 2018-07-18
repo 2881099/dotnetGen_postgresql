@@ -19,19 +19,16 @@
 
 ## 在已有的项目上生成
 
-> GenPg 数据库ip[:5432] -U 登陆名 -P 密码 -D 数据库1[,数据库2] -N 命名空间
+```shell
+dotnet new mvc
+GenPg 数据库ip[:5432] -U 登陆名 -P 密码 -D 数据库1[,数据库2] -N 命名空间
+```
 
-## 生成完整的模块化结构
+## 生成完整的模块化解决方案
 
-> GenPg 数据库ip[:5432] -U 登陆名 -P 密码 -D 数据库1[,数据库2] -N 命名空间 -R -S -A
-
------------------
-
-生成的项目运行大概需要注意：
-
- * 修改 /admin/appsettings.json 里面的 redis 配置（缓存、Session 使用了 redis）
-
------------------
+```shell
+GenPg 数据库ip[:5432] -U 登陆名 -P 密码 -D 数据库1[,数据库2] -N 命名空间 -R -S -A
+```
 
 | <font color=gray>功能对比</font> | [dotnetGen_mysql](https://github.com/2881099/dotnetGen_mysql) | [dotnetGen_postgresql](https://github.com/2881099/dotnetGen_postgresql) |
 | ----------------: | --------------: | -------------------: |
@@ -61,7 +58,7 @@
 
 
 
-# 项目结构介绍
+# 模块化框架目录结构介绍
 
 ## Module
 
