@@ -1,7 +1,7 @@
 ﻿# dotnetGen_postgresql
 .NETCore 2.1 + PostgreSQL 生成器
 
-本项目为生成器，用于快速创建和更新 .NETCore 2.1 + PostgreSQL 项目，非常合适敏捷开发；
+本项目为生成器，用于快速创建和更新 .NETCore 2.1 + PostgreSQL 项目，非常合适敏捷与快速开发；
 
 类型映射参考 http://www.postgres.cn/docs/9.6/datatype.html 开发；
 
@@ -10,11 +10,9 @@
  * 2、避免随意创建表，严格把控数据库，有标准的ER图；
  * 3、统一规范数据库操作类与方法，一条心堆业务；
 
-[下载生成器客户端试用](https://files.cnblogs.com/files/kellynic/%E7%94%9F%E6%88%90%E5%99%A8pgsql.zip)
+> 使用 navicat 模型创建和管理 ER 图，从数据库导入/同步结构到数据库，打心底里好用..
 
-> 或者 dotnet tool install -g GenPg
-
-> 查看帮助可输入 cmd -> GenPg ?
+[下载生成器客户端试用](https://files.cnblogs.com/files/kellynic/%E7%94%9F%E6%88%90%E5%99%A8pgsql.zip)，或者安装命令工具 dotnet tool install -g GenPg
 
 共勉，一起学习QQ群：8578575
 
