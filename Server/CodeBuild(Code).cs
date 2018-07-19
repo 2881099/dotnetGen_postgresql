@@ -396,7 +396,7 @@ namespace {0}.Model {{
 					string csType = column.CsType;
 					string nColumn_Name = column.Name;
 					string uColumn_Name = UFString(column.Name);
-					string comment = _column_coments[table.FullName][column.Name];
+					string comment = _column_coments.ContainsKey(table.FullName) && _column_coments[table.FullName].ContainsKey(column.Name) ? _column_coments[table.FullName][column.Name] : column.Name;
 					string prototype_comment = comment == column.Name ? "" : string.Format(@"/// <summary>
 		/// {0}
 		/// </summary>
@@ -2116,7 +2116,7 @@ namespace {0}.BLL {{
 
 						string csType = col.CsType;
 						string csUName = UFString(col.Name);
-						string comment = _column_coments[table.FullName][col.Name];
+						string comment = _column_coments.ContainsKey(table.FullName) && _column_coments[table.FullName].ContainsKey(col.Name) ? _column_coments[table.FullName][col.Name] : col.Name;
 						if (csType == "string") {
 							keyLikes += "a." + col.Name + " ilike {0} or ";
 						}
@@ -2559,7 +2559,7 @@ namespace {0}.BLL {{
 						string csType = col.CsType;
 						string csUName = UFString(col.Name);
 						string lname = col.Name.ToLower();
-						string comment = _column_coments[table.FullName][col.Name];
+						string comment = _column_coments.ContainsKey(table.FullName) && _column_coments[table.FullName].ContainsKey(col.Name) ? _column_coments[table.FullName][col.Name] : col.Name;
 						string rfvEmpty = string.Empty;
 						List<ColumnInfo> us = table.Uniques.Find(delegate (List<ColumnInfo> cs) {
 							return cs.Find(delegate (ColumnInfo col88) {
