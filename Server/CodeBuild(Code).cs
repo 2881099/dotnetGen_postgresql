@@ -30,7 +30,7 @@ namespace Server {
 			string wwwroot_sitemap = "";
 
 			Dictionary<string, bool> isMakedHtmlSelect = new Dictionary<string, bool>();
-			StringBuilder Model_Build__ExtensionMethods_cs = new StringBuilder();
+			StringBuilder Model_Build_ExtensionMethods_cs = new StringBuilder();
 			List<string> admin_controllers_syscontroller_init_sysdir = new List<string>();
 
 			StringBuilder sb1 = new StringBuilder();
@@ -1003,12 +1003,16 @@ namespace {0}.Model {{
 				loc1.Add(new BuildInfo(string.Concat(CONST.corePath, solutionName, @".db\Model\", basicName, @"\", uClass_Name, "Info.cs"), Deflate.Compress(Is_System_ComponentModel ? sb1.ToString().Replace("using System.Reflection;", "using System.ComponentModel;\r\nusing System.Reflection;") : sb1.ToString())));
 				clearSb();
 
-				Model_Build__ExtensionMethods_cs.AppendFormat(@"
+				Model_Build_ExtensionMethods_cs.AppendFormat(@"
 	public static string ToJson(this {0}Info item) => JsonConvert.SerializeObject(GetBson(new [] {{ item }}).First());
 	public static string ToJson(this {0}Info[] items) => JsonConvert.SerializeObject(GetBson(items));
 	public static string ToJson(this IEnumerable<{0}Info> items) => JsonConvert.SerializeObject(GetBson(items));
 	public static IDictionary[] ToBson(this {0}Info[] items, Func<{0}Info, object> func = null) => GetBson(items, func);
 	public static IDictionary[] ToBson(this IEnumerable<{0}Info> items, Func<{0}Info, object> func = null) => GetBson(items, func);
+", uClass_Name, solutionName);
+
+				if (table.PrimaryKeys.Count > 0)
+					Model_Build_ExtensionMethods_cs.AppendFormat(@"
 	public static {1}.DAL.{0}.SqlUpdateBuild UpdateDiy(this List<{0}Info> items) => {1}.BLL.{0}.UpdateDiy(items);
 ", uClass_Name, solutionName);
 				#endregion
@@ -2800,7 +2804,7 @@ namespace {0}.BLL {{
 			clearSb();
 			#endregion
 			#region Model ExtensionMethods.cs À©Õ¹·½·¨
-			sb1.AppendFormat(CONST.Model_Build__ExtensionMethods_cs, solutionName, Model_Build__ExtensionMethods_cs.ToString());
+			sb1.AppendFormat(CONST.Model_Build__ExtensionMethods_cs, solutionName, Model_Build_ExtensionMethods_cs.ToString());
 			loc1.Add(new BuildInfo(string.Concat(CONST.corePath, solutionName, @".db\Model\", basicName, @"\_ExtensionMethods.cs"), Deflate.Compress(sb1.ToString())));
 			clearSb();
 			#endregion
