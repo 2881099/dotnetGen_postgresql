@@ -634,5 +634,15 @@ namespace Server {
 			name = Regex.Replace(name.TrimStart('@'), @"[^\w]", "_");
 			return char.IsLetter(name, 0) ? name : string.Concat("_", name);
 		}
+
+		protected void FindForeignKeyTables(List<TableInfo> tables, TableInfo table, List<ForeignKeyInfo> finds) {
+			foreach(var t in tables) {
+				foreach (var fk in t.ForeignKeys) {
+					if (fk.ReferencedTable.FullName == table.FullName) {
+						finds.Add(fk);
+					}
+				}
+			}
+		}
 	}
 }
