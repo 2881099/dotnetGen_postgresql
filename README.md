@@ -241,12 +241,18 @@ BLL Select.ToList(10, "cache_key")，将查询结果缓存10秒，需要手工�
 	> 表.Select.Where字段Any、表.UpdateDiy(1).Set字段Join
 * 字段类型 jsonb，会生成
 	> 表.Select.Where字段Contain
+
 	> 表.Select.Where字段ContainKey
+
 	> 表.Select.Where字段ContainKeys
+	
 	> 表.Select.Where字段ContainKeysAny
 * 字段类型 hstore，会生成
 	> 表.Select.Where字段Contain
+
 	> 表.Select.Where字段ContainKey
+
 	> 表.Select.Where字段ContainKeys
+
 	> 表.Select.Where字段ContainKeysAny
 * 100%的数据类型被支持
