@@ -462,7 +462,7 @@ public static partial class {0}ExtensionMethods {{
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include=""dng.Pgsql"" Version=""1.1.9"" />
-		<PackageReference Include=""CSRedisCore"" Version=""2.6.0"" />
+		<PackageReference Include=""CSRedisCore"" Version=""2.6.1"" />
 	</ItemGroup>
 </Project>
 ";
@@ -479,7 +479,7 @@ public static partial class {0}ExtensionMethods {{
 		<ProjectReference Include=""..\{0}.db\{0}.db.csproj"" />
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include=""Caching.CSRedis"" Version=""2.6.0"" />
+		<PackageReference Include=""Caching.CSRedis"" Version=""2.6.1"" />
 		<PackageReference Include=""Microsoft.AspNetCore.Mvc"" Version=""2.1.1"" />
 		<PackageReference Include=""Microsoft.AspNetCore.Session"" Version=""2.1.1"" />
 		<PackageReference Include=""Microsoft.AspNetCore.Diagnostics"" Version=""2.1.1"" />
