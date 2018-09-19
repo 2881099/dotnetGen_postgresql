@@ -95,6 +95,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
+using Npgsql.LegacyPostgis;
 
 namespace {0}.BLL {{
 	/// <summary>
@@ -435,6 +436,7 @@ using System.Linq;
 using System.Reflection;
 using Newtonsoft.Json;
 using NpgsqlTypes;
+using Npgsql.LegacyPostgis;
 using {0}.Model;
 
 public static partial class {0}ExtensionMethods {{
@@ -469,7 +471,7 @@ public static partial class {0}ExtensionMethods {{
 		<AssemblyName>{0}.db</AssemblyName>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include=""dng.Pgsql"" Version=""1.1.13"" />
+		<PackageReference Include=""dng.Pgsql"" Version=""1.1.14"" />
 		<PackageReference Include=""CSRedisCore"" Version=""2.6.6"" />
 	</ItemGroup>
 </Project>
@@ -1132,6 +1134,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
 using NpgsqlTypes;
+using Npgsql.LegacyPostgis;
 using {0}.BLL;
 using {0}.Model;
 
@@ -1436,6 +1439,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
 using NpgsqlTypes;
+using Npgsql.LegacyPostgis;
 using {0}.BLL;
 using {0}.Model;
 

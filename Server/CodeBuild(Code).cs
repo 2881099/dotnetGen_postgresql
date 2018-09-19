@@ -198,6 +198,7 @@ where a.typtype = 'e' and ns.nspname in ('{0}')", string.Join("','", owners.ToAr
 			}
 			string code = string.Format(@"using System;
 using NpgsqlTypes;
+using Npgsql.LegacyPostgis;
 
 namespace {0}.Model {{
 ", solutionName);
@@ -281,6 +282,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using Newtonsoft.Json;
 using NpgsqlTypes;
+using Npgsql.LegacyPostgis;
 
 namespace {0}.Model {{
 ", solutionName);
@@ -393,6 +395,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NpgsqlTypes;
+using Npgsql.LegacyPostgis;
 
 namespace {0}.Model {{
 	[JsonObject(MemberSerialization.OptIn)]
@@ -1080,6 +1083,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Npgsql;
 using NpgsqlTypes;
+using Npgsql.LegacyPostgis;
 using {0}.Model;
 
 namespace {0}.DAL {{
@@ -1482,6 +1486,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Npgsql;
 using NpgsqlTypes;
+using Npgsql.LegacyPostgis;
 using {0}.Model;
 
 namespace {0}.BLL {{
