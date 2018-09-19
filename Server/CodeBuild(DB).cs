@@ -219,6 +219,7 @@ where ns.nspname || '.' || d.relname in ({0})
 						break;
 					}
 				}
+				if (loc3.ContainsKey(table_id) == false || loc3[table_id].ContainsKey(column) == false) continue;
 				ColumnInfo loc9 = loc3[table_id][column];
 				if (loc9.IsClustered == false && is_clustered) loc9.IsClustered = is_clustered;
 				if (loc9.IsPrimaryKey == false && is_primary_key) loc9.IsPrimaryKey = is_primary_key;
