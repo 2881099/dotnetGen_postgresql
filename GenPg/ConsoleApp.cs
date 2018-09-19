@@ -374,7 +374,7 @@ Github: https://github.com/2881099/dotnetgen_postgresql
 
 			
 			{this.SolutionName}.BLL.PSqlHelper.Initialization({appName.Groups[1].Value}.ApplicationServices.GetService<IDistributedCache>(), Configuration.GetSection(""{this.SolutionName}_BLL_ITEM_CACHE""),
-				{connStr}, {loggerFactory.Groups[1].Value}.CreateLogger(""{this.SolutionName}_DAL_psqlhelper""));
+				{connStr}, /* 此参数可以配置【从数据库】 */ null, {loggerFactory.Groups[1].Value}.CreateLogger(""{this.SolutionName}_DAL_psqlhelper""));
 
 
 ";
