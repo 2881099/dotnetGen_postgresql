@@ -419,9 +419,7 @@ Github: https://github.com/2881099/dotnetgen_postgresql
 			RedisHelper.Initialization(
 				csredis: new CSRedis.CSRedisClient(//null,
 					//{connStr1},
-					{connStr2}),
-				serialize: value => Newtonsoft.Json.JsonConvert.SerializeObject(value),
-				deserialize: (data, type) => Newtonsoft.Json.JsonConvert.DeserializeObject(data, type));
+					{connStr2}));
 			{servicesName = m.Groups[1].Value}.AddSingleton<IDistributedCache>(new Microsoft.Extensions.Caching.Redis.CSRedisCache(RedisHelper.Instance));
 
 
