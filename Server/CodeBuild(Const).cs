@@ -467,7 +467,7 @@ public static partial class {0}ExtensionMethods {{
 		<AssemblyName>{0}.db</AssemblyName>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include=""dng.Pgsql"" Version=""1.1.22"" />
+		<PackageReference Include=""dng.Pgsql"" Version=""1.1.23"" />
 		<PackageReference Include=""CSRedisCore"" Version=""3.0.16"" />
 	</ItemGroup>
 </Project>
