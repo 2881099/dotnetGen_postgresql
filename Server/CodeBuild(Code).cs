@@ -414,7 +414,7 @@ namespace {0}.Model {{
 					string prototype_comment = comment == column.Name ? "" : string.Format(@"/// <summary>
 		/// {0}
 		/// </summary>
-		", comment);
+		", comment.Replace("\r\n", "\n").Replace("\n", "\r\n		/// "));
 
 					sb1.AppendFormat(
 	@"		{0} {1} _{2};
